@@ -1,0 +1,11 @@
+{
+  "name": "aqua-clock-web-tools",
+  "private": true,
+  "type": "module",
+  "description": "Runs the built page in a real headless Chromium (software WebGL2) and measures it.",
+  "devDependencies": {
+    "@sparticuz/chromium": "^153.0.0",
+    "puppeteer-core": "^25.12.0",
+    "three": "0.169.0"
+  }
+}
