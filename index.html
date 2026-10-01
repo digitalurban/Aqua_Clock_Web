@@ -200,6 +200,10 @@
         .sub, .eyebrow, .stat { display: none; }
         main { padding-bottom: 8px; }
       }
+      /* a quiet link to the source, in the footer */
+      /* padding with an equal negative margin: a thumb-sized target that does not move the layout */
+      footer a.gh { display: inline-block; padding: 14px 10px; margin: -14px -10px; color: rgba(220, 236, 228, 0.78); text-decoration: underline; text-decoration-color: rgba(220, 236, 228, 0.3); text-underline-offset: 3px; }
+      footer a.gh:hover, footer a.gh:focus-visible { color: #fff; text-decoration-color: rgba(255, 255, 255, 0.7); }
       /* the bottom-right corner belongs to the air stone: hint above stats, both at the left */
       footer { flex-direction: column-reverse; align-items: flex-start; gap: 6px; }
       /* ---- full screen view: the tank and nothing else ---- */
@@ -255,11 +259,11 @@
 
       <main>
         <div class="copy">
-          <div class="eyebrow"><span class="dot"></span>Live in your browser</div>
+          
           <h1>Where the fish<br /><em>tell the time.</em></h1>
           <p class="sub">
-            A planted freshwater tank that lives in your browser. The shoal drifts, feeds and shies from your finger — then, on every minute, gathers into the hour.
-          </p>
+          A planted freshwater tank that lives in your browser. The shoal swims and feeds — then, on every minute, gathers to tell the time.
+        </p>
           <div class="cta">
             <button class="primary" id="showtime" type="button">Show the time</button>
             <button class="pill" id="feed" type="button">Feed the fish</button>
@@ -273,6 +277,7 @@
           <span class="stat">seven-segment digits</span>
           <span>render <b id="state">…</b></span>
           <span class="stat">forms <b>on the minute</b></span>
+          <span><a class="gh" href="https://github.com/digitalurban/aqua-clock-web" target="_blank" rel="noopener">Source on GitHub</a></span>
         </div>
         <div>Move your cursor or finger into the tank — they'll notice.</div>
       </footer>
