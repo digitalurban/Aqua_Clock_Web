@@ -4,9 +4,9 @@
 Eighty-four neon tetras drift, feed and shy from your cursor, then, every minute, gather
 into the hour. Two clownfish keep house in an anemone. No install, no account.
 
-### ▶ [Open it: digitalurban.github.io/aqua-clock-web](https://digitalurban.github.io/aqua-clock-web/)
+### ▶ [Open it: digitalurban.org/Aqua_Clock_Web](https://digitalurban.org/Aqua_Clock_Web/)
 
-[Source](https://github.com/digitalurban/aqua-clock-web) · [The iPhone and iPad app](https://apps.apple.com/gb/app/aqua-clock/id6760460959) · [How the app was made](https://connected-environments.org/blog/2026-03-20-aqua-clock-vibe-coding-boids-fish-tell-time/)
+[Source](https://github.com/digitalurban/Aqua_Clock_Web) · [The iPhone and iPad app](https://apps.apple.com/gb/app/aqua-clock/id6760460959) · [How the app was made](https://connected-environments.org/blog/2026-03-20-aqua-clock-vibe-coding-boids-fish-tell-time/)
 
 ![The tank in full screen view: no text, the shoal spelling the time](docs/images/desktop-clean.jpg)
 
@@ -18,7 +18,7 @@ taking turns and GitHub as the hand-off between them, and written up in
 [*Multi-Model Vibe Coding, Boids, and the Fish That Tell the Time*](https://connected-environments.org/blog/2026-03-20-aqua-clock-vibe-coding-boids-fish-tell-time/).
 
 Six months on, we came across [**Desktop Habitats**](https://github.com/chaseleantj/desktop-habitats), Chase Lean's open-source
-(MIT) macOS aquarium screen saver, whose tank is photoreal: a very different world from
+(MIT) live aquarium wallpaper for macOS, whose tank is photoreal: a very different world from
 the app's flat 2D scene. So we asked what a current model could do with it. We pointed
 **Claude Sonnet 5.5** at the Habitats repository and asked for the same idea, fish that
 tell the time, on the web. Over one long conversation it read the Habitats code, brought
@@ -38,8 +38,8 @@ show is in **[docs/SIX-MONTHS.md](docs/SIX-MONTHS.md)**.
 
 > ### Built on Desktop Habitats
 > This project stands on **[Desktop Habitats](https://github.com/chaseleantj/desktop-habitats)**
-> by Chase Lean, a live wallpaper and screen saver for macOS. It is MIT licensed. **If what
-> you want is an aquarium screen saver for your Mac, go to Habitats.** It is a beautiful
+> by Chase Lean, a live aquarium wallpaper for macOS. It is MIT licensed. **If what
+> you want is a live aquarium on your Mac desktop, go to Habitats.** It is a beautiful
 > piece of work and this project would not exist without it. Exactly how much of it is used,
 > in three tiers:
 >
@@ -53,8 +53,9 @@ show is in **[docs/SIX-MONTHS.md](docs/SIX-MONTHS.md)**.
 >   with our own proportions) and everything above the tank: the clock, the clownfish
 >   behaviour, the bubbles, the fog, the air stone, the pump and the page.
 >
-> What this repo adds is a clock, a pair of clownfish, glassy bubbles, and a way to run it on
-> any screen with a browser. Not affiliated with, or endorsed by, Habitats.
+> What this repo adds is a clock, a pair of clownfish, glassy bubbles, and a hosted web page
+> tuned for phones and tablets. (Habitats itself also offers a local browser preview of
+> Riverscape.) Not affiliated with, or endorsed by, Habitats.
 
 ## The app
 
@@ -68,7 +69,7 @@ running all night on a phone is the reason it is not simply *in* the app; see
 
 ## Try it
 
-**Live: [https://digitalurban.github.io/aqua-clock-web/](https://digitalurban.github.io/aqua-clock-web/)**
+**Live: [https://digitalurban.org/Aqua_Clock_Web/](https://digitalurban.org/Aqua_Clock_Web/)**
 
 - **Show the time** gathers the shoal into the hour straight away (otherwise it does it
   for the first fifteen seconds of every minute).
