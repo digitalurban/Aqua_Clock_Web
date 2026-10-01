@@ -29,9 +29,6 @@ any browser.
 </tr>
 </table>
 
-How the two builds differ, what was measured, and what the comparison does and does not
-show is in **[docs/SIX-MONTHS.md](docs/SIX-MONTHS.md)**.
-
 > ### Built on Desktop Habitats
 > This project stands on **[Desktop Habitats](https://github.com/chaseleantj/desktop-habitats)**
 > by Chase Lean, a live aquarium wallpaper for macOS. It is MIT licensed. **If what
