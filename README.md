@@ -6,7 +6,6 @@ to tell the time.
 
 ### ▶ [View it via: digitalurban.org/Aqua_Clock_Web](https://digitalurban.org/Aqua_Clock_Web/)
 
-[Source](https://github.com/digitalurban/Aqua_Clock_Web) · [The iPhone and iPad app](https://apps.apple.com/gb/app/aqua-clock/id6760460959) · [How the app was made](https://connected-environments.org/blog/2026-03-20-aqua-clock-vibe-coding-boids-fish-tell-time/)
 
 ![The tank in full screen view: no text, the shoal spelling the time](docs/images/desktop-clean.jpg)
 
