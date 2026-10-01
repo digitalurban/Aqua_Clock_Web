@@ -93,7 +93,7 @@ void main() {
 `;
 
 export function createBubbles(scene, cfg) {
-  const { lite, surfaceY, stone, pump, bedAt, absorb = [0.034, 0.013, 0.019] } = cfg;
+  const { lite, surfaceY, stone, pump, bedAt, absorb = [0.022, 0.0085, 0.0055] } = cfg;
   const MAX = lite ? 760 : 1500;
   const RATE_STONE = lite ? 115 : 230;
   const RATE_PUMP = lite ? 34 : 70;

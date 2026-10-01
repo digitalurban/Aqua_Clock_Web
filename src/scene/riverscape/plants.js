@@ -135,9 +135,12 @@ export const THICKETS = [
 // main stone and the foot of the wood on the right. A short stand in the shade at the back
 // of the middle carries the planting down under the open water without closing it.
 const BEDS = [
-  { minX: -9.6, maxX: -2.6, minZ: -5.7, maxZ: -2.0, clumps: 9 },
-  { minX: 3.9, maxX: 10.4, minZ: -5.7, maxZ: -2.2, clumps: 7 },
-  { minX: -2.8, maxX: 3.8, minZ: -5.8, maxZ: -3.6, clumps: 6, height: 0.85 },
+  // PATCH (Aqua Clock): a different planting plan. The right bed is the heavier here,
+  // answering our upright driftwood, and the middle-back is thinned and kept low so there
+  // is open water behind the clock.
+  { minX: -9.6, maxX: -3.4, minZ: -5.7, maxZ: -2.0, clumps: 6 },
+  { minX: 3.4, maxX: 10.4, minZ: -5.7, maxZ: -2.2, clumps: 10 },
+  { minX: -2.8, maxX: 3.8, minZ: -5.8, maxZ: -3.6, clumps: 3, height: 0.6 },
 ];
 const grassHeight = (x) => 5.4 + 4.0 * smoothstep(2.0, 7.5, Math.abs(x));
 
@@ -214,14 +217,22 @@ export function createPlants(scene, {
     [2.6, -1.6, 1.5, 9],
     [9.3, -2.6, 2.4, 12],
     [9.8, -1.9, 1.8, 10],
+    // PATCH (Aqua Clock): low rosettes round the feet of our stones
+    [2.4, -0.9, 1.6, 10],
+    [3.6, -0.6, 1.3, 9],
+    [1.7, 0.6, 1.1, 8],
+    [4.2, -1.6, 1.8, 10],
   ])
     ribbonRosette(batch, x, z, h, n);
   // Fern tufts: three on the moss clump at the fork of the trunk, the rest in the crevices
   // where stone meets sand.
   for (const [x, y, z, s, n, onWood] of [
-    [1.55, 3.07, 0.05, 1.05, 48, true],
-    [2.38, 2.77, 0.15, 0.9, 40, true],
-    [0.98, 3.42, -0.3, 0.75, 30, true],
+    // PATCH (Aqua Clock): these were on the fork of Habitats' trunk, which is gone;
+    // they are on our limb and trunk now.
+    // PATCH (Aqua Clock): with no wood, these ferns sit in the crevices of our stones
+    [2.4, 0.3, -0.2, 0.7, 26],
+    [3.7, 0.3, -0.5, 0.6, 22],
+    [2.6, 0.3, 0.4, 0.55, 20],
     [-3.6, 0.4, 0.75, 0.7, 26],
     [-3.75, 1.55, 0.05, 0.85, 32],
     [2.35, 0.3, 0.8, 0.6, 22],

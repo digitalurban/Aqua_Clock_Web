@@ -8,7 +8,7 @@
 planting, foliage and water lighting.
 
 `math.js` and `foliage.js` are unchanged. Every other change is marked
-`PATCH (Aqua Clock)` in the source and is one of three kinds:
+`PATCH (Aqua Clock)` in the source and is one of seven kinds:
 
 1. **Textures** (`environment.js`): the Poly Haven maps are loaded from inlined data URIs
    rather than a relative `assets/` path, because the page is a single self-contained file.
@@ -20,6 +20,25 @@ planting, foliage and water lighting.
    the new `lod.js`): counts and tessellation that Habitats hard-codes are read through a
    dial, so a phone can run a lighter scene. With the `rich` profile the dial is 1 and
    every value is exactly Habitats' own.
+
+4. **No driftwood** (`environment.js`): the `BRANCHES` list is empty, so the tank has no wood.
+   Two places in Habitats' code assumed at least one branch (the sheltered sand reads the first
+   branch's base; the moss fronds are scattered over the wood) and are guarded. The four moss
+   colonies that belonged to Habitats' trunk are replaced with two on our stones.
+5. **Bark on thick wood** (`environment.js`, `branchGeometry`; unused while there is no wood): Habitats' branches are all thin,
+   so its bark texture is mapped once round the circumference. On our thick driftwood that
+   stretches it into horizontal slabs, so it is repeated in step with the circumference (a whole
+   number, so it still meets itself at the seam) and the splits are made shallower on thick pieces.
+   Its surface is also smoothed into long grain: the ridges barely twist, the weathering is broad
+   rather than warty, the knot and the splits are smaller, and the bark relief is softer.
+6. **Water colour** (`water.js`): the extinction constants `(0.020, 0.008, 0.012)`, which let
+   green through furthest, are replaced with `(0.022, 0.0085, 0.0055)`, which lets blue through
+   furthest. The model is untouched; only the colour it produces changes.
+7. **Layout data** (`environment.js`, `plants.js`, `stemplants.js`): six stones appended to
+   `ROCKS` (so no existing index moves), among them a tall upright stone where the wood was; a
+   stand of stem plants behind it and low rosettes round the stones; the grass beds re-weighted (the right bed heavier, the
+   middle-back thinned and lowered); the middle-back feathery stand lowered; and the three
+   fern tufts that sat on Habitats' trunk moved into the crevices of our stones.
 
 The Poly Haven textures (`../textures.js`) are CC0: Rock Boulder Dry, Rough Wood and
 Sand 01, downscaled to 512px. See `THIRD-PARTY.md` at the repo root.

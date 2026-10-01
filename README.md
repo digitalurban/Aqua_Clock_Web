@@ -2,7 +2,7 @@
 
 **Where the fish tell the time.** A planted freshwater tank that runs in your browser.
 Eighty-four neon tetras drift, feed and shy from your cursor, then, every minute, gather
-into the hour. Two clownfish keep house in an anemone. No install, no account.
+into the hour. Two clownfish patrol their patch of the tank. No install, no account.
 
 ### ▶ [Open it: digitalurban.org/Aqua_Clock_Web](https://digitalurban.org/Aqua_Clock_Web/)
 
@@ -43,9 +43,17 @@ show is in **[docs/SIX-MONTHS.md](docs/SIX-MONTHS.md)**.
 > piece of work and this project would not exist without it. Exactly how much of it is used,
 > in three tiers:
 >
-> - **Copied.** The tank: substrate, stones, driftwood, moss, planting and the way the water
->   absorbs light. Seven of its modules are vendored here, two byte-for-byte and the rest
->   with a handful of marked changes ([which, and why](src/scene/riverscape/NOTICE.md)).
+> - **Copied.** The code that builds the tank: substrate, stones, moss, planting and the way
+>   the water absorbs light. Seven of its modules are vendored here, two byte-for-byte and the
+>   rest with a handful of marked changes ([which, and why](src/scene/riverscape/NOTICE.md)).
+>   Its ten stones, its plant species and its moss and algae systems are all still in the tank.
+> - **Changed.** The composition and the colour, using that code. There is no driftwood:
+>   Habitats' trunk is a diagonal across the middle of the tank, where the clock sits, so this
+>   tank is stones and planting instead. Six of the stones are our own (among them a tall
+>   upright stone behind the main stone, with two companions), with a stand of stem plants,
+>   rosettes and ferns around them. The planting is re-planned, with the right bed the heavier
+>   and the middle-back thinned to leave open water behind the clock. And the water is a clear
+>   aquarium blue: Habitats' light lets green through furthest, ours lets blue.
 > - **Adapted.** How light passes through a fish's skin: the constants and formula in
 >   `src/scene/riverscape.js` are taken from its `fish-anatomy.js`.
 > - **Ours, inspired by it.** The fish bodies (a neon tetra and a clownfish, built the way
@@ -94,18 +102,21 @@ bar. For none at all: open it with `#full`, then Share, Add to Home Screen.
 
 ## What is in the tank
 
-- **The clock.** 84 neons take positions on a seven-segment layout, three to a segment.
+- **The clock.** 84 neons take positions on a seven-segment layout, three to a segment. The
+  page tells the scene how much room its words leave, and the clock lays itself out in the
+  space above them, so it never sits behind the text; in full screen view it is centred.
   The mechanism is ported from [city-clock](https://github.com/digitalurban/city-clock).
   Fish not needed for the current digits are sent to the back of the tank and keep swimming.
   Held upright, a phone gets the digits stacked, hours over minutes.
-- **Clownfish.** An *Amphiprion ocellaris* pair on a host anemone. They hover, dart, turn
-  by pivoting, nose into the tentacles and shimmy, take the occasional lap of the tank,
+- **Clownfish.** An *Amphiprion ocellaris* pair that keep to a patch of the tank in front of the
+  left-hand stones. They hover, dart, turn by pivoting, nose down at the stones and shimmy,
+  take the occasional lap of the tank,
   dash for food, and bolt for cover if the cursor comes close. Motion is
   acceleration-limited, and nothing ever moves a fish by assigning its position.
 - **Bubbles.** Glassy sprites (bright rim, specular glint, dark hairline edge) rather than
   dots: a plume from a half-buried air stone that widens and grows as it rises, micro-bubbles
   thrown by the pump, and the odd bubble pearling off a leaf.
-- **Water.** Per-channel fog, so distance turns the tank green-teal rather than grey;
+- **Water.** Per-channel fog, so distance turns the tank blue-teal rather than grey;
   and Habitats' own light model for everything under it.
 - **Two profiles.** `rich` is Riverscape as published. `lite` drops the shadow pass and
   thins the planting, for phones and older tablets. Both are always multisampled: the

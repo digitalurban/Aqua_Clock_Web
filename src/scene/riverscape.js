@@ -662,8 +662,9 @@ function clockAssignments(date, view) {
   const place = [];   // per digit: [left edge, top edge]
   if (portrait) {
     w = (view.width * 0.64) / (2 + 0.44);
+    h = Math.min(w * 1.6, (fullHeight * 0.62) / 2.32, (view.maxDigitHeight ?? Infinity) / 2.32);
+    w = Math.min(w, h / 1.35);   // never much squatter than a digit should be
     gap = w * 0.44;
-    h = Math.min(w * 1.6, (fullHeight * 0.62) / 2.32);
     const rowGap = h * 0.32;
     // shifted left, so the air stone's plume has the right-hand side to itself
     const startX = -(2 * w + gap) / 2 - view.width * 0.08;
@@ -672,7 +673,8 @@ function clockAssignments(date, view) {
   } else {
     const usable = view.width * 0.62;
     w = usable / (4 + 2 * 0.44 + 0.75);
-    h = Math.min(view.height * 0.5, w * 1.6);
+    h = Math.min(view.height * 0.5, w * 1.6, view.maxDigitHeight ?? Infinity);
+    w = Math.min(w, h / 1.35);   // never much squatter than a digit should be
     gap = w * 0.44;
     const groupGap = w * 0.75;
     const total = 4 * w + 2 * gap + groupGap;
@@ -916,7 +918,7 @@ export function steerShoal(fish, assignments, ctx) {
  * main.js.
  *
  * What is ours sits on top of it: a shoal of neons that tells the time, a pair
- * of clownfish on a host anemone, a pump and an air stone.
+ * of clownfish, a pump and an air stone.
  *
  * That means this scene lives in Riverscape's coordinates — substrate near
  * y = 0, water surface at y = 10, camera well back on a long lens.
@@ -949,7 +951,7 @@ export async function createRiverscape(canvas, options = {}) {
     THREE.ShaderChunk.fog_fragment = `
 #ifdef USE_FOG
   #ifdef FOG_EXP2
-    vec3 fogFactor3 = 1.0 - exp( - pow( fogDensity * vFogDepth * vec3( 1.16, 0.93, 0.99 ), vec3( 2.0 ) ) );
+    vec3 fogFactor3 = 1.0 - exp( - pow( fogDensity * vFogDepth * vec3( 1.18, 0.98, 0.84 ), vec3( 2.0 ) ) );
     gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor3 );
   #else
     float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
@@ -995,8 +997,8 @@ export async function createRiverscape(canvas, options = {}) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#050f0c');
-  scene.fog = new THREE.FogExp2('#16312a', 0.034);
+  scene.background = new THREE.Color('#0a2a42');
+  scene.fog = new THREE.FogExp2('#1f5878', 0.034);
 
   const camera = new THREE.PerspectiveCamera(25.8, 16 / 9, 0.2, 70);
   camera.position.set(0, 4.65, 20.5);
@@ -1004,7 +1006,7 @@ export async function createRiverscape(canvas, options = {}) {
 
   /* -- light: Riverscape's rig, from its main.js --------------------- */
 
-  scene.add(new THREE.HemisphereLight(0xc3d7bd, 0x353427, 0.3));
+  scene.add(new THREE.HemisphereLight(0xc2d6e2, 0x30343a, 0.3));
 
   const key = new THREE.DirectionalLight(0xfff8ee, 4.5);
   key.position.set(-3, 11.5, 4.4);
@@ -1024,14 +1026,14 @@ export async function createRiverscape(canvas, options = {}) {
   fill.position.set(1, 5, 10);
   scene.add(fill);
 
-  const back = new THREE.DirectionalLight(0xdbf9ba, 0.8);
+  const back = new THREE.DirectionalLight(0xd2ecf2, 0.8);
   back.position.set(2, 10, -4);
   scene.add(back);
 
   if (!lite) {
     const pmrem = new THREE.PMREMGenerator(renderer);
     const envScene = new THREE.Scene();
-    envScene.background = new THREE.Color('#253129');
+    envScene.background = new THREE.Color('#2c4456');
     const strip = new THREE.Mesh(
       new THREE.PlaneGeometry(16, 4),
       new THREE.MeshBasicMaterial({
@@ -1050,7 +1052,7 @@ export async function createRiverscape(canvas, options = {}) {
 
   const backboard = new THREE.Mesh(
     new THREE.PlaneGeometry(44, 24),
-    new THREE.MeshStandardMaterial({ color: 0x1d3a2c, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: 0x2a6688, roughness: 1 }),
   );
   backboard.position.set(0, 7, -7.2);
   backboard.receiveShadow = true;
@@ -1139,76 +1141,13 @@ export async function createRiverscape(canvas, options = {}) {
     lite, surfaceY: SURFACE_Y, stone: STONE, pump: PUMP, bedAt: BED,
   });
 
-  /* -- the host anemone ----------------------------------------------- */
+  /* -- the clownfish's patch ------------------------------------------ */
+  // They used to keep house in an anemone. Its tentacles rendered as spiky shards, so it
+  // went. The pair keep the same patch of tank, in the nook in front of the left-hand
+  // stones, and still hover, browse and bolt for it when something comes close.
 
   const HOST = new THREE.Vector3(-5.1, BED(-5.1, 1.6) + 0.25, 1.6);
   const swayUniforms = { uTime: { value: 0 } };
-  {
-    const foot = new THREE.Mesh(
-      new THREE.SphereGeometry(0.72, 14, 10),
-      new THREE.MeshStandardMaterial({ color: '#8a5f6e', roughness: 0.85 }),
-    );
-    foot.position.copy(HOST);
-    foot.scale.set(1, 0.55, 1);
-    foot.castShadow = true;
-    scene.add(foot);
-
-    const tentacle = buildBladeGeometry();
-    const count = lite ? 90 : 190;
-    const mesh = new THREE.InstancedMesh(
-      tentacle,
-      (() => {
-        const material = new THREE.MeshStandardMaterial({
-          color: 0xffffff, roughness: 1.0, metalness: 0, side: THREE.DoubleSide,
-          // a low self-lit floor: thin blades under a hard key light otherwise
-          // go white on one face and black on the other
-          emissive: 0x5a2f40, emissiveIntensity: 0.85,
-        });
-        material.onBeforeCompile = (shader) => {
-          waterLitShader(shader);
-          shader.uniforms.uTime = swayUniforms.uTime;
-          shader.vertexShader =
-            'attribute float aPhase;\nuniform float uTime;\n' + shader.vertexShader;
-          shader.vertexShader = shader.vertexShader.replace(
-            '#include <begin_vertex>',
-            `#include <begin_vertex>
-             float bend = pow(clamp(position.y, 0.0, 1.0), 1.5);
-             transformed.x += sin(uTime * 0.7 + aPhase) * 0.3 * bend;
-             transformed.z += cos(uTime * 0.53 + aPhase * 1.7) * 0.22 * bend;`,
-          );
-        };
-        material.customProgramCacheKey = () => 'anemone';
-        return material;
-      })(),
-      count,
-    );
-    const matrix = new THREE.Matrix4();
-    const colour = new THREE.Color();
-    const phases = new Float32Array(count);
-    const euler = new THREE.Euler();
-    const quaternion = new THREE.Quaternion();
-    for (let i = 0; i < count; i++) {
-      const angle = rand(0, Math.PI * 2);
-      const radius = Math.pow(Math.random(), 0.55) * 1.05;
-      const rim = radius / 1.05;
-      euler.set(rim * rand(0.5, 1.0), angle, 0, 'YXZ');
-      quaternion.setFromEuler(euler);
-      matrix.compose(
-        new THREE.Vector3(
-          HOST.x + Math.cos(angle) * radius,
-          HOST.y + 0.12 * (1 - rim),
-          HOST.z + Math.sin(angle) * radius * 0.7,
-        ),
-        quaternion,
-        new THREE.Vector3(rand(0.9, 1.5), rand(0.5, 0.95) * (1.1 - 0.4 * rim), 1),
-      );
-      mesh.setMatrixAt(i, matrix);
-      mesh.setColorAt(i, colour.setHSL(rand(0.90, 0.98), rand(0.38, 0.6), rand(0.34, 0.5)));
-      phases[i] = rand(0, 6.28);
-    }
-    mesh.geometry.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phases, 1));
-    scene.add(mesh);
-  }
 
   /* -- the shoal ------------------------------------------------------- */
 
@@ -1484,15 +1423,43 @@ export async function createRiverscape(canvas, options = {}) {
 
   /* -- clock ------------------------------------------------------------- */
 
+  /*
+   * The page can tell the scene how much room its words leave: a band of the screen, in CSS
+   * pixels from the top. The clock is laid out inside it, so it never sits behind the text
+   * whatever the screen shape. With no band (full screen view, or no text) it is centred as
+   * before.
+   */
+  let clockArea = null;
+  const rayDir = new THREE.Vector3();
+  function worldYAtPx(py) {
+    const ndcY = 1 - (py / (canvas.clientHeight || window.innerHeight)) * 2;
+    camera.updateMatrixWorld(true);
+    rayDir.set(0, ndcY, 0.5).unproject(camera).sub(camera.position);
+    return camera.position.y + ((1.2 - camera.position.z) / rayDir.z) * rayDir.y;   // on the digit plane, z = 1.2
+  }
   function viewFrame() {
     const height = 2 * Math.tan((camera.fov * Math.PI) / 360) * (camera.position.z - 1.2);
-    return {
+    const frame = {
       width: Math.min(height * camera.aspect, 15.5),
       height: Math.min(height, 8.6),
       fullHeight: height,
       // upright screens put the words at the bottom, so the digits sit higher
       centerY: camera.aspect < 0.9 ? 6.2 : 5.1,
     };
+    if (clockArea) {
+      const yTop = worldYAtPx(clockArea.top);
+      const yBottom = worldYAtPx(clockArea.bottom);
+      if (yTop > yBottom) {
+        frame.centerY = (yTop + yBottom) / 2;
+        frame.maxDigitHeight = (yTop - yBottom) * 0.94;
+      }
+    }
+    return frame;
+  }
+  function setClockArea(top, bottom) {
+    // a band too thin to hold digits is ignored, and the default layout is used
+    clockArea = top != null && bottom != null && bottom - top > 80 ? { top, bottom } : null;
+    assignments = clockAssignments(new Date(), viewFrame());
   }
 
   let assignments = clockAssignments(new Date(), viewFrame());
@@ -1545,9 +1512,9 @@ export async function createRiverscape(canvas, options = {}) {
 
   /*
    * Ocellaris behaviour, from how they actually live: they stay on and around
-   * their host anemone, move in short deliberate darts between long pauses of
+   * their patch of tank, move in short deliberate darts between long pauses of
    * hovering on fanning pectorals, turn by pivoting rather than snapping round,
-   * nose down into the tentacles and shimmy, rush for food, and bolt home when
+   * nose down at the stones and shimmy, rush for food, and bolt home when
    * something big comes near. The larger female holds the best water; the male
    * defers to her. Motion is acceleration-limited so nothing changes velocity in
    * a single frame, and orientation follows velocity through a turn-rate limit.
@@ -1566,7 +1533,7 @@ export async function createRiverscape(canvas, options = {}) {
   clownMesh.geometry.attributes.aSpeed.needsUpdate = true;
 
   // A target inside a rock's push zone can never be reached: the fish would just
-  // hover at the edge of it. The anemone sits well inside such a zone, so every
+  // hover at the edge of it. Their patch sits well inside such a zone, so every
   // target is resampled until it is clear of rock.
   const clearOfRock = (p, scale) =>
     obstacles.every((o) => p.distanceTo(o.center) > o.radius + 0.45 + scale * 0.23);
@@ -1581,7 +1548,7 @@ export async function createRiverscape(canvas, options = {}) {
       c.foray = true;
       sample = () => c.target.set(rand(-BOUNDS.x + 0.8, BOUNDS.x - 0.8), clamp(rand(2.2, 6.4), 1.4, 7.6), rand(-2.6, 2.2));
     } else if (roll < 0.46) {
-      // nose into the tentacles, from the open front of the anemone
+      // nose down at the stones, from the open front of their patch
       c.browseNext = true;
       sample = () => c.target.set(HOST.x + rand(-0.6, 0.6), HOST.y + rand(0.4, 0.75), HOST.z + rand(0.1, 0.8));
     } else {
@@ -1713,7 +1680,7 @@ export async function createRiverscape(canvas, options = {}) {
       else if (c.mode === 'pause') tilt = Math.sin(c.bob * 0.5) * 0.07 - 0.04;
       c.pitch += (tilt - c.pitch) * Math.min(1, dt * 4.5);
 
-      // a quick shimmy on entering the anemone: the whole fish wags side to side
+      // a quick shimmy on settling in: the whole fish wags side to side
       let wag = 0;
       if (c.shimmy > 0) { c.shimmy -= dt; wag = Math.sin(elapsed * 32) * 0.26 * Math.min(1, c.shimmy * 2); }
 
@@ -1899,5 +1866,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST } };
+  return { feed, showTime, advance, setClockArea, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST } };
 }

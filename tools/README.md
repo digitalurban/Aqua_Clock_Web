@@ -22,8 +22,8 @@ Notes
 - Software GL manages about 1 fps in the lite profile and crashes on capture in rich, so
   use `?quality=lite` and the built-in `habitat.advance(seconds)` to fast-forward.
 - The scripts inject `window.__habitat` by rewriting the page on the fly; nothing in the
-  shipped page depends on them. `habitat.debug` exposes clownfish state and the anemone
-  position for these tools.
+  shipped page depends on them. `habitat.debug` exposes clownfish state and the position
+  of their home patch for these tools.
 - `THREE_DIR` overrides where the local three.js build is found (the sandbox these were
   written in could not reach the CDN the page normally loads it from).
 - This is not Safari and not an Apple GPU. It says nothing about frame rate, heat or

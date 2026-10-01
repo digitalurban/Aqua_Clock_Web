@@ -465,9 +465,11 @@ function hygrophila(batch, plant) {
 const BANDS = [
   { x: [-10.6, -6.2], z: [-6.0, -3.1], clumps: 11, shoots: [3, 5], height: [5.4, 10.2], exposure: [0.94, 1.16], feathery: 0.78 },
   { x: [5.6, 10.6], z: [-6.0, -3.1], clumps: 10, shoots: [3, 5], height: [5.2, 10.0], exposure: [0.9, 1.12], feathery: 0.74 },
-  { x: [-3.0, 3.6], z: [-5.9, -3.4], clumps: 9, shoots: [2, 4], height: [4.2, 7.6], exposure: [0.5, 0.8], feathery: 0.5 },
+  { x: [-3.0, 3.6], z: [-5.9, -3.4], clumps: 5, shoots: [2, 4], height: [2.0, 3.8], exposure: [0.5, 0.8], feathery: 0.5 },
   { x: [-3.5, -0.9], z: [-3.4, -1.6], clumps: 7, shoots: [4, 6], height: [2.4, 4.2], exposure: [0.95, 1.15], feathery: 0.1, canopy: 2.6 },
   { x: [4.3, 5.4], z: [-2.9, -1.7], clumps: 3, shoots: [3, 5], height: [2.2, 3.4], exposure: [0.9, 1.1], feathery: 0.1, canopy: 2.4 },
+  // PATCH (Aqua Clock): a stand behind our tall stone, where the wood was
+  { x: [1.6, 3.4], z: [-3.2, -2.0], clumps: 5, shoots: [3, 5], height: [3.4, 5.6], exposure: [0.9, 1.1], feathery: 0.3 },
 ];
 
 export function plantStems(batch) {

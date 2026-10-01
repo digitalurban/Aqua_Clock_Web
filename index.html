@@ -25,9 +25,9 @@
         --glass: rgba(10, 26, 36, 0.44);
         --accent: #6ec7de;
         --sand: #e9d6a9;
-        --bg: #050f0c;
+        --bg: #0a2a42;
       }
-      :root:not([data-theme='light']) { --bg: #050f0c; }
+      :root:not([data-theme='light']) { --bg: #0a2a42; }
       * { box-sizing: border-box; }
       html, body { margin: 0; height: 100%; }
       body {
@@ -51,8 +51,8 @@
         inset: 0;
         pointer-events: none;
         background:
-          radial-gradient(120% 90% at 50% 50%, transparent 42%, rgba(3, 12, 9, 0.42) 100%),
-          linear-gradient(180deg, rgba(3, 12, 9, 0.55) 0%, transparent 24%, transparent 70%, rgba(3, 12, 9, 0.44) 100%);
+          radial-gradient(120% 90% at 50% 50%, transparent 42%, rgba(4, 18, 30, 0.42) 100%),
+          linear-gradient(180deg, rgba(4, 18, 30, 0.55) 0%, transparent 24%, transparent 70%, rgba(4, 18, 30, 0.44) 100%);
       }
       .boot {
         position: fixed;
@@ -109,7 +109,7 @@
       main {
         flex: 1;
         display: flex;
-        align-items: center;
+        align-items: flex-end; padding-bottom: 20px;
         min-height: 0;
       }
       .copy { max-width: 560px; }
@@ -194,6 +194,13 @@
         h1 { font-size: clamp(2rem, 9vw, 3rem); margin-bottom: 12px; }
         .sub { font-size: 0.94rem; line-height: 1.5; margin-bottom: 18px; }
         .eyebrow { margin-bottom: 14px; }
+      }
+      /* short screens: one line and no paragraph, so the words take little room and the clock keeps its own */
+      @media (max-height: 640px) {
+        h1 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); margin-bottom: 14px; white-space: nowrap; }
+        h1 br { display: none; }
+        h1 em::before { content: ' '; }
+        .sub { display: none; }
       }
       /* a phone held upright has no room for prose or stats: the tank is the page */
       @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
@@ -611,7 +618,9 @@ const surfaceLightGLSL = /* glsl */ `
     // scene, which this tank is explicitly not to have. Only the extinction is
     // kept, so the water keeps its colour and loses its motion.
     float focus = 1.0;
-    vec3 absorption = exp(-vec3(0.020, 0.008, 0.012) * depth);
+    // PATCH (Aqua Clock): bluer water. Habitats' constants (0.020, 0.008, 0.012) let green
+    // through furthest, which is why its tank is green. Here blue goes furthest.
+    vec3 absorption = exp(-vec3(0.022, 0.0085, 0.0055) * depth);
     return focus * absorption;
   }
 `;
@@ -1421,9 +1430,11 @@ function hygrophila(batch, plant) {
 const BANDS = [
   { x: [-10.6, -6.2], z: [-6.0, -3.1], clumps: 11, shoots: [3, 5], height: [5.4, 10.2], exposure: [0.94, 1.16], feathery: 0.78 },
   { x: [5.6, 10.6], z: [-6.0, -3.1], clumps: 10, shoots: [3, 5], height: [5.2, 10.0], exposure: [0.9, 1.12], feathery: 0.74 },
-  { x: [-3.0, 3.6], z: [-5.9, -3.4], clumps: 9, shoots: [2, 4], height: [4.2, 7.6], exposure: [0.5, 0.8], feathery: 0.5 },
+  { x: [-3.0, 3.6], z: [-5.9, -3.4], clumps: 5, shoots: [2, 4], height: [2.0, 3.8], exposure: [0.5, 0.8], feathery: 0.5 },
   { x: [-3.5, -0.9], z: [-3.4, -1.6], clumps: 7, shoots: [4, 6], height: [2.4, 4.2], exposure: [0.95, 1.15], feathery: 0.1, canopy: 2.6 },
   { x: [4.3, 5.4], z: [-2.9, -1.7], clumps: 3, shoots: [3, 5], height: [2.2, 3.4], exposure: [0.9, 1.1], feathery: 0.1, canopy: 2.4 },
+  // PATCH (Aqua Clock): a stand behind our tall stone, where the wood was
+  { x: [1.6, 3.4], z: [-3.2, -2.0], clumps: 5, shoots: [3, 5], height: [3.4, 5.6], exposure: [0.9, 1.1], feathery: 0.3 },
 ];
 
 function plantStems(batch) {
@@ -1506,11 +1517,9 @@ const TAU = Math.PI * 2;
 // aquascaper tied moss on. Coverage runs 0 (bare) to 1 (dense turf). A slow noise field
 // lowers the threshold unevenly, so patches sit at different stages of growth.
 const MOSS_COLONIES = [
-  // The tied-on clump at the fork of the trunk, and a thinner growth higher up.
-  { center: vec(1.55, 3.07, 0.05), radius: 1.0, strength: 0.75 },
-  { center: vec(2.38, 2.77, 0.15), radius: 0.8, strength: 0.6 },
-  { center: vec(0.98, 3.42, -0.3), radius: 0.65, strength: 0.55 },
-  { center: vec(-0.9, 6.2, -0.95), radius: 0.5, strength: 0.35 },
+  // PATCH (Aqua Clock): moss on the shoulder of our tall stone and its low companion.
+  { center: vec(3.0, 2.9, -0.95), radius: 0.6, strength: 0.45 },
+  { center: vec(2.0, 0.9, -0.1), radius: 0.5, strength: 0.4 },
   // Stone shoulders: the sheltered side of the main stone where the trunk rises past it,
   // the top of the secondary stone, and the low companions. The main stone's face stays
   // mostly bare.
@@ -1538,6 +1547,17 @@ const ROCKS = [
   { x: 5.35, z: 1.75, rx: 0.42, ry: 0.34, rz: 0.4, lean: 0.2 },
   { x: 6.0, z: 1.3, rx: 0.38, ry: 0.3, rz: 0.35, lean: 0.2 },
   { x: -2.1, z: 1.55, rx: 0.3, ry: 0.22, rz: 0.28, lean: -0.1 },
+  // PATCH (Aqua Clock): three stones of our own, appended so the indices Habitats' growth
+  // is keyed to do not move: a low one in the front of the middle, a broad one under the
+  // limb of our driftwood, and a larger one at the far left.
+  { x: -1.6, z: 1.9, rx: 0.5, ry: 0.32, rz: 0.45, lean: 0.1 },
+  { x: 1.4, z: 0.2, rx: 0.8, ry: 0.5, rz: 0.7, lean: -0.15 },
+  { x: -7.5, z: -1.2, rx: 0.9, ry: 0.7, rz: 0.8, lean: 0.12 },
+  // PATCH (Aqua Clock): where the wood was: a tall upright stone behind the main stone, with
+  // a low companion in front of it and a small one behind.
+  { x: 3.0, z: -1.3, rx: 0.85, ry: 1.75, rz: 0.75, lean: -0.1 },
+  { x: 2.0, z: -0.4, rx: 0.6, ry: 0.55, rz: 0.55, lean: 0.15 },
+  { x: 3.9, z: -2.2, rx: 0.5, ry: 0.6, rz: 0.45, lean: -0.2 },
 ];
 // A stone is buried to a little under half its height, and deeper the more it leans, so
 // the raised side of a leaning stone still meets the sand.
@@ -1548,87 +1568,11 @@ function rockCenterY(rock) {
     Math.abs(rock.lean) * rock.rx * 0.55
   );
 }
-// The driftwood: a trunk rising from behind the main stone to the upper left with a fork
-// at its tip, a limb reaching forward over the stones toward the glass, a stub higher up,
-// and roots at the base that run out over the sand and back behind the main stone. Fish
-// swim around the trunk and the limb; the trunk is also somewhere they go to look.
-const BRANCHES = [
-  {
-    p: [
-      [3.48, 0.37, -0.15],
-      [2.64, 1.52, -0.42],
-      [1.37, 3.6, -0.65],
-      [0.15, 5.25, -0.85],
-      [-1.49, 6.76, -1.05],
-      [-3.33, 7.95, -1.05],
-    ],
-    r: 0.78,
-    t: 0.12,
-    obstacle: true,
-    landmarks: true,
-  },
-  // The fork starts inside the trunk and is thinner than the trunk where it leaves it, so
-  // the join reads as one piece of wood.
-  {
-    p: [
-      [-1.45, 6.7, -1.05],
-      [-2.08, 7.14, -1.17],
-      [-2.17, 7.85, -1.15],
-      [-2.64, 8.43, -1.08],
-    ],
-    r: 0.15,
-    t: 0.017,
-  },
-  {
-    p: [
-      [2.71, 1.36, -0.37],
-      [3.15, 0.95, -0.6],
-      [4.16, 0.36, -0.92],
-      [4.84, 0.17, -0.7],
-    ],
-    r: 0.33,
-    t: 0.012,
-  },
-  {
-    p: [
-      [2.05, 2.75, -0.5],
-      [2.75, 3.15, 0.15],
-      [3.45, 3.4, 0.85],
-      [4.0, 3.7, 1.4],
-    ],
-    r: 0.3,
-    t: 0.03,
-    obstacle: true,
-  },
-  {
-    p: [
-      [0.3, 5.03, -0.82],
-      [-0.23, 5.59, -0.31],
-      [-0.59, 5.76, -0.18],
-    ],
-    r: 0.21,
-    t: 0.012,
-  },
-  {
-    p: [
-      [2.9, 0.84, -0.3],
-      [1.95, 0.48, -0.06],
-      [1.46, 0.14, 0.39],
-      [0.74, 0.13, 0.55],
-    ],
-    r: 0.35,
-    t: 0.02,
-  },
-  {
-    p: [
-      [2.34, 2.12, -0.38],
-      [3.2, 2.58, -1.4],
-      [3.55, 3.14, -1.67],
-    ],
-    r: 0.25,
-    t: 0.022,
-  },
-];
+// PATCH (Aqua Clock): no driftwood. Habitats' trunk is a diagonal across the middle of the
+// tank, where this project's clock sits, and our own attempts at wood did not look right, so
+// the tank is stones and planting instead. The list is kept, empty, so the code that builds
+// wood still runs; a branch added here would be built exactly as before.
+const BRANCHES = [];
 
 function mossCoverage(p, n, shelter, bias = 0) {
   let colony = 0;
@@ -1854,18 +1798,25 @@ function branchGeometry(points, baseRadius, tipRadius, seed) {
   const length = curve.getLength();
   const rows = Math.ceil(length * 30),
     cols = 96;
+  // PATCH (Aqua Clock): Habitats' branches are all thin, so mapping the bark texture once
+  // round the circumference was fine. On a thick log it stretches the texture several times
+  // wider than it is tall and reads as horizontal slabs. Repeat it in step with the
+  // circumference (a whole number, so it still meets itself at the seam), and make the splits
+  // shallower on thick pieces.
+  const uRepeat = Math.max(1, Math.round(baseRadius / 0.3));
+  const splitScale = Math.min(1, 0.5 / baseRadius);
   const positions = [],
     uv = [],
     indices = [],
     colors = [];
   const frames = curve.computeFrenetFrames(rows, false);
   const splitRandom = randomGenerator(Math.round(seed * 1000) + 51781);
-  const splits = Array.from({ length: 14 }, () => ({
+  const splits = Array.from({ length: 6 }, () => ({
     a: splitRandom() * Math.PI * 2,
     t: splitRandom(),
     width: 0.025 + splitRandom() * 0.09,
     length: 0.025 + splitRandom() * 0.15,
-    depth: 0.08 + splitRandom() * 0.32,
+    depth: (0.08 + splitRandom() * 0.32) * splitScale,
   }));
   for (let i = 0; i <= rows; i++) {
     const t = i / rows,
@@ -1877,15 +1828,18 @@ function branchGeometry(points, baseRadius, tipRadius, seed) {
     );
     for (let j = 0; j <= cols; j++) {
       const a = (j / cols) * Math.PI * 2;
+      // PATCH (Aqua Clock): long, flowing grain instead of spiralling ridges and warts. On
+      // Habitats' thin branches the original read as bark; on a thick trunk it read as a
+      // gherkin. The ridges barely twist along the length, and the weathering is broad.
       const ridges =
-        0.077 * Math.sin(a * 9 + t * 12 + seed) +
-        0.042 * Math.sin(a * 17 - t * 7) +
-        0.022 * Math.sin(a * 31 + t * 33);
-      const weather = noise(Math.cos(a) * 5 + seed, t * 30, Math.sin(a) * 5);
+        0.05 * Math.sin(a * 9 + t * 2.5 + seed) +
+        0.022 * Math.sin(a * 17 - t * 1.5) +
+        0.008 * Math.sin(a * 31 + t * 4);
+      const weather = noise(Math.cos(a) * 3 + seed, t * 5, Math.sin(a) * 3);
       const channel =
         Math.pow(0.5 + 0.5 * Math.sin(a * 13 + Math.sin(t * 15) * 0.25), 10) *
         0.07;
-      const knot = 1 + 0.15 * Math.exp(-(((t - 0.47) / 0.08) ** 2));
+      const knot = 1 + 0.05 * Math.exp(-(((t - 0.47) / 0.12) ** 2));
       let splitDepth = 0;
       for (const split of splits) {
         const angle = a - split.a - 0.07 * Math.sin(t * 37 + seed);
@@ -1901,7 +1855,7 @@ function branchGeometry(points, baseRadius, tipRadius, seed) {
         knot *
         (1 +
           ridges +
-          (weather - 0.5) * 0.3 -
+          (weather - 0.5) * 0.12 -
           channel -
           Math.min(0.65, splitDepth));
       const radial = frames.normals[i]
@@ -1910,7 +1864,7 @@ function branchGeometry(points, baseRadius, tipRadius, seed) {
         .addScaledVector(frames.binormals[i], Math.sin(a));
       const v = p.clone().addScaledVector(radial, r);
       positions.push(v.x, v.y, v.z);
-      uv.push(j / cols, length * t * 0.32);
+      uv.push((j / cols) * uRepeat, length * t * 0.32);
       const tint =
         (0.7 + weather * 0.27 + ridges * 0.7 - channel) *
         (1 - Math.min(0.6, splitDepth * 1.5));
@@ -2080,16 +2034,20 @@ async function createEnvironment(scene) {
   const loader = new THREE.TextureLoader();
   const [rockMaterial, woodMaterial, sandMaterial] = await Promise.all([
     surface(loader, "rock_boulder_dry", [1.8, 1.4], 0x62665d, "#2e4315"),
-    surface(loader, "rough_wood", [2.1, 1.4], 0xc3ad8e, "#334a16"),
+    // PATCH (Aqua Clock): a paler, warmer tan, closer to cured driftwood
+    surface(loader, "rough_wood", [2.1, 1.4], 0xeccb9a, "#334a16"),
     surface(loader, "sand_01", [10, 6], 0xf4e5c8, "#5a5a26", "#23401a"),
   ]);
   rockMaterial.normalScale.set(0.85, 0.85);
   woodMaterial.roughness = 0.86;
+  // PATCH (Aqua Clock): softer bark relief, for weathered driftwood rather than raw bark
+  woodMaterial.normalScale.set(0.3, 0.3);
   woodMaterial.normalScale.set(0.8, 0.8);
   sandMaterial.normalScale.set(0.32, 0.32);
 
   const rocks = ROCKS;
-  const woodBase = vec(...BRANCHES[0].p[0]);
+  // PATCH (Aqua Clock): with no wood, sand gathers at the foot of our tall stone instead
+  const woodBase = BRANCHES.length ? vec(...BRANCHES[0].p[0]) : vec(3.0, 0, -1.3);
   // How sheltered the sand is from the flow: against the stones and the foot of the wood,
   // and under the back planting.
   const shelterAt = (x, z) => {
@@ -2284,7 +2242,7 @@ async function createEnvironment(scene) {
   // Fronds stand thick on the tied-on wood clump; on stone and sand the growth is a short
   // turf, so the fronds there are few and small.
   plantFronds(scene, [
-    { samples: woodSamples, count: lodCount(1600, LOD.fronds, 120) },
+    { samples: woodSamples, count: woodSamples.length ? lodCount(1600, LOD.fronds, 120) : 0 },
     { samples: rockSamples, count: lodCount(800, LOD.fronds, 80), scale: 0.5 },
     { samples: sandSamples, count: lodCount(80, LOD.fronds, 16), scale: 0.6 },
   ]);
@@ -3707,9 +3665,12 @@ const THICKETS = [
 // main stone and the foot of the wood on the right. A short stand in the shade at the back
 // of the middle carries the planting down under the open water without closing it.
 const BEDS = [
-  { minX: -9.6, maxX: -2.6, minZ: -5.7, maxZ: -2.0, clumps: 9 },
-  { minX: 3.9, maxX: 10.4, minZ: -5.7, maxZ: -2.2, clumps: 7 },
-  { minX: -2.8, maxX: 3.8, minZ: -5.8, maxZ: -3.6, clumps: 6, height: 0.85 },
+  // PATCH (Aqua Clock): a different planting plan. The right bed is the heavier here,
+  // answering our upright driftwood, and the middle-back is thinned and kept low so there
+  // is open water behind the clock.
+  { minX: -9.6, maxX: -3.4, minZ: -5.7, maxZ: -2.0, clumps: 6 },
+  { minX: 3.4, maxX: 10.4, minZ: -5.7, maxZ: -2.2, clumps: 10 },
+  { minX: -2.8, maxX: 3.8, minZ: -5.8, maxZ: -3.6, clumps: 3, height: 0.6 },
 ];
 const grassHeight = (x) => 5.4 + 4.0 * smoothstep(2.0, 7.5, Math.abs(x));
 
@@ -3786,14 +3747,22 @@ function createPlants(scene, {
     [2.6, -1.6, 1.5, 9],
     [9.3, -2.6, 2.4, 12],
     [9.8, -1.9, 1.8, 10],
+    // PATCH (Aqua Clock): low rosettes round the feet of our stones
+    [2.4, -0.9, 1.6, 10],
+    [3.6, -0.6, 1.3, 9],
+    [1.7, 0.6, 1.1, 8],
+    [4.2, -1.6, 1.8, 10],
   ])
     ribbonRosette(batch, x, z, h, n);
   // Fern tufts: three on the moss clump at the fork of the trunk, the rest in the crevices
   // where stone meets sand.
   for (const [x, y, z, s, n, onWood] of [
-    [1.55, 3.07, 0.05, 1.05, 48, true],
-    [2.38, 2.77, 0.15, 0.9, 40, true],
-    [0.98, 3.42, -0.3, 0.75, 30, true],
+    // PATCH (Aqua Clock): these were on the fork of Habitats' trunk, which is gone;
+    // they are on our limb and trunk now.
+    // PATCH (Aqua Clock): with no wood, these ferns sit in the crevices of our stones
+    [2.4, 0.3, -0.2, 0.7, 26],
+    [3.7, 0.3, -0.5, 0.6, 22],
+    [2.6, 0.3, 0.4, 0.55, 20],
     [-3.6, 0.4, 0.75, 0.7, 26],
     [-3.75, 1.55, 0.05, 0.85, 32],
     [2.35, 0.3, 0.8, 0.6, 22],
@@ -3929,7 +3898,7 @@ void main() {
 `;
 
 function createBubbles(scene, cfg) {
-  const { lite, surfaceY, stone, pump, bedAt, absorb = [0.034, 0.013, 0.019] } = cfg;
+  const { lite, surfaceY, stone, pump, bedAt, absorb = [0.022, 0.0085, 0.0055] } = cfg;
   const MAX = lite ? 760 : 1500;
   const RATE_STONE = lite ? 115 : 230;
   const RATE_PUMP = lite ? 34 : 70;
@@ -4740,8 +4709,9 @@ function clockAssignments(date, view) {
   const place = [];   // per digit: [left edge, top edge]
   if (portrait) {
     w = (view.width * 0.64) / (2 + 0.44);
+    h = Math.min(w * 1.6, (fullHeight * 0.62) / 2.32, (view.maxDigitHeight ?? Infinity) / 2.32);
+    w = Math.min(w, h / 1.35);   // never much squatter than a digit should be
     gap = w * 0.44;
-    h = Math.min(w * 1.6, (fullHeight * 0.62) / 2.32);
     const rowGap = h * 0.32;
     // shifted left, so the air stone's plume has the right-hand side to itself
     const startX = -(2 * w + gap) / 2 - view.width * 0.08;
@@ -4750,7 +4720,8 @@ function clockAssignments(date, view) {
   } else {
     const usable = view.width * 0.62;
     w = usable / (4 + 2 * 0.44 + 0.75);
-    h = Math.min(view.height * 0.5, w * 1.6);
+    h = Math.min(view.height * 0.5, w * 1.6, view.maxDigitHeight ?? Infinity);
+    w = Math.min(w, h / 1.35);   // never much squatter than a digit should be
     gap = w * 0.44;
     const groupGap = w * 0.75;
     const total = 4 * w + 2 * gap + groupGap;
@@ -4994,7 +4965,7 @@ function steerShoal(fish, assignments, ctx) {
  * main.js.
  *
  * What is ours sits on top of it: a shoal of neons that tells the time, a pair
- * of clownfish on a host anemone, a pump and an air stone.
+ * of clownfish, a pump and an air stone.
  *
  * That means this scene lives in Riverscape's coordinates — substrate near
  * y = 0, water surface at y = 10, camera well back on a long lens.
@@ -5027,7 +4998,7 @@ async function createRiverscape(canvas, options = {}) {
     THREE.ShaderChunk.fog_fragment = `
 #ifdef USE_FOG
   #ifdef FOG_EXP2
-    vec3 fogFactor3 = 1.0 - exp( - pow( fogDensity * vFogDepth * vec3( 1.16, 0.93, 0.99 ), vec3( 2.0 ) ) );
+    vec3 fogFactor3 = 1.0 - exp( - pow( fogDensity * vFogDepth * vec3( 1.18, 0.98, 0.84 ), vec3( 2.0 ) ) );
     gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor3 );
   #else
     float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
@@ -5073,8 +5044,8 @@ async function createRiverscape(canvas, options = {}) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#050f0c');
-  scene.fog = new THREE.FogExp2('#16312a', 0.034);
+  scene.background = new THREE.Color('#0a2a42');
+  scene.fog = new THREE.FogExp2('#1f5878', 0.034);
 
   const camera = new THREE.PerspectiveCamera(25.8, 16 / 9, 0.2, 70);
   camera.position.set(0, 4.65, 20.5);
@@ -5082,7 +5053,7 @@ async function createRiverscape(canvas, options = {}) {
 
   /* -- light: Riverscape's rig, from its main.js --------------------- */
 
-  scene.add(new THREE.HemisphereLight(0xc3d7bd, 0x353427, 0.3));
+  scene.add(new THREE.HemisphereLight(0xc2d6e2, 0x30343a, 0.3));
 
   const key = new THREE.DirectionalLight(0xfff8ee, 4.5);
   key.position.set(-3, 11.5, 4.4);
@@ -5102,14 +5073,14 @@ async function createRiverscape(canvas, options = {}) {
   fill.position.set(1, 5, 10);
   scene.add(fill);
 
-  const back = new THREE.DirectionalLight(0xdbf9ba, 0.8);
+  const back = new THREE.DirectionalLight(0xd2ecf2, 0.8);
   back.position.set(2, 10, -4);
   scene.add(back);
 
   if (!lite) {
     const pmrem = new THREE.PMREMGenerator(renderer);
     const envScene = new THREE.Scene();
-    envScene.background = new THREE.Color('#253129');
+    envScene.background = new THREE.Color('#2c4456');
     const strip = new THREE.Mesh(
       new THREE.PlaneGeometry(16, 4),
       new THREE.MeshBasicMaterial({
@@ -5128,7 +5099,7 @@ async function createRiverscape(canvas, options = {}) {
 
   const backboard = new THREE.Mesh(
     new THREE.PlaneGeometry(44, 24),
-    new THREE.MeshStandardMaterial({ color: 0x1d3a2c, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: 0x2a6688, roughness: 1 }),
   );
   backboard.position.set(0, 7, -7.2);
   backboard.receiveShadow = true;
@@ -5217,76 +5188,13 @@ async function createRiverscape(canvas, options = {}) {
     lite, surfaceY: SURFACE_Y, stone: STONE, pump: PUMP, bedAt: BED,
   });
 
-  /* -- the host anemone ----------------------------------------------- */
+  /* -- the clownfish's patch ------------------------------------------ */
+  // They used to keep house in an anemone. Its tentacles rendered as spiky shards, so it
+  // went. The pair keep the same patch of tank, in the nook in front of the left-hand
+  // stones, and still hover, browse and bolt for it when something comes close.
 
   const HOST = new THREE.Vector3(-5.1, BED(-5.1, 1.6) + 0.25, 1.6);
   const swayUniforms = { uTime: { value: 0 } };
-  {
-    const foot = new THREE.Mesh(
-      new THREE.SphereGeometry(0.72, 14, 10),
-      new THREE.MeshStandardMaterial({ color: '#8a5f6e', roughness: 0.85 }),
-    );
-    foot.position.copy(HOST);
-    foot.scale.set(1, 0.55, 1);
-    foot.castShadow = true;
-    scene.add(foot);
-
-    const tentacle = buildBladeGeometry();
-    const count = lite ? 90 : 190;
-    const mesh = new THREE.InstancedMesh(
-      tentacle,
-      (() => {
-        const material = new THREE.MeshStandardMaterial({
-          color: 0xffffff, roughness: 1.0, metalness: 0, side: THREE.DoubleSide,
-          // a low self-lit floor: thin blades under a hard key light otherwise
-          // go white on one face and black on the other
-          emissive: 0x5a2f40, emissiveIntensity: 0.85,
-        });
-        material.onBeforeCompile = (shader) => {
-          waterLitShader(shader);
-          shader.uniforms.uTime = swayUniforms.uTime;
-          shader.vertexShader =
-            'attribute float aPhase;\nuniform float uTime;\n' + shader.vertexShader;
-          shader.vertexShader = shader.vertexShader.replace(
-            '#include <begin_vertex>',
-            `#include <begin_vertex>
-             float bend = pow(clamp(position.y, 0.0, 1.0), 1.5);
-             transformed.x += sin(uTime * 0.7 + aPhase) * 0.3 * bend;
-             transformed.z += cos(uTime * 0.53 + aPhase * 1.7) * 0.22 * bend;`,
-          );
-        };
-        material.customProgramCacheKey = () => 'anemone';
-        return material;
-      })(),
-      count,
-    );
-    const matrix = new THREE.Matrix4();
-    const colour = new THREE.Color();
-    const phases = new Float32Array(count);
-    const euler = new THREE.Euler();
-    const quaternion = new THREE.Quaternion();
-    for (let i = 0; i < count; i++) {
-      const angle = rand(0, Math.PI * 2);
-      const radius = Math.pow(Math.random(), 0.55) * 1.05;
-      const rim = radius / 1.05;
-      euler.set(rim * rand(0.5, 1.0), angle, 0, 'YXZ');
-      quaternion.setFromEuler(euler);
-      matrix.compose(
-        new THREE.Vector3(
-          HOST.x + Math.cos(angle) * radius,
-          HOST.y + 0.12 * (1 - rim),
-          HOST.z + Math.sin(angle) * radius * 0.7,
-        ),
-        quaternion,
-        new THREE.Vector3(rand(0.9, 1.5), rand(0.5, 0.95) * (1.1 - 0.4 * rim), 1),
-      );
-      mesh.setMatrixAt(i, matrix);
-      mesh.setColorAt(i, colour.setHSL(rand(0.90, 0.98), rand(0.38, 0.6), rand(0.34, 0.5)));
-      phases[i] = rand(0, 6.28);
-    }
-    mesh.geometry.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phases, 1));
-    scene.add(mesh);
-  }
 
   /* -- the shoal ------------------------------------------------------- */
 
@@ -5562,15 +5470,43 @@ async function createRiverscape(canvas, options = {}) {
 
   /* -- clock ------------------------------------------------------------- */
 
+  /*
+   * The page can tell the scene how much room its words leave: a band of the screen, in CSS
+   * pixels from the top. The clock is laid out inside it, so it never sits behind the text
+   * whatever the screen shape. With no band (full screen view, or no text) it is centred as
+   * before.
+   */
+  let clockArea = null;
+  const rayDir = new THREE.Vector3();
+  function worldYAtPx(py) {
+    const ndcY = 1 - (py / (canvas.clientHeight || window.innerHeight)) * 2;
+    camera.updateMatrixWorld(true);
+    rayDir.set(0, ndcY, 0.5).unproject(camera).sub(camera.position);
+    return camera.position.y + ((1.2 - camera.position.z) / rayDir.z) * rayDir.y;   // on the digit plane, z = 1.2
+  }
   function viewFrame() {
     const height = 2 * Math.tan((camera.fov * Math.PI) / 360) * (camera.position.z - 1.2);
-    return {
+    const frame = {
       width: Math.min(height * camera.aspect, 15.5),
       height: Math.min(height, 8.6),
       fullHeight: height,
       // upright screens put the words at the bottom, so the digits sit higher
       centerY: camera.aspect < 0.9 ? 6.2 : 5.1,
     };
+    if (clockArea) {
+      const yTop = worldYAtPx(clockArea.top);
+      const yBottom = worldYAtPx(clockArea.bottom);
+      if (yTop > yBottom) {
+        frame.centerY = (yTop + yBottom) / 2;
+        frame.maxDigitHeight = (yTop - yBottom) * 0.94;
+      }
+    }
+    return frame;
+  }
+  function setClockArea(top, bottom) {
+    // a band too thin to hold digits is ignored, and the default layout is used
+    clockArea = top != null && bottom != null && bottom - top > 80 ? { top, bottom } : null;
+    assignments = clockAssignments(new Date(), viewFrame());
   }
 
   let assignments = clockAssignments(new Date(), viewFrame());
@@ -5623,9 +5559,9 @@ async function createRiverscape(canvas, options = {}) {
 
   /*
    * Ocellaris behaviour, from how they actually live: they stay on and around
-   * their host anemone, move in short deliberate darts between long pauses of
+   * their patch of tank, move in short deliberate darts between long pauses of
    * hovering on fanning pectorals, turn by pivoting rather than snapping round,
-   * nose down into the tentacles and shimmy, rush for food, and bolt home when
+   * nose down at the stones and shimmy, rush for food, and bolt home when
    * something big comes near. The larger female holds the best water; the male
    * defers to her. Motion is acceleration-limited so nothing changes velocity in
    * a single frame, and orientation follows velocity through a turn-rate limit.
@@ -5644,7 +5580,7 @@ async function createRiverscape(canvas, options = {}) {
   clownMesh.geometry.attributes.aSpeed.needsUpdate = true;
 
   // A target inside a rock's push zone can never be reached: the fish would just
-  // hover at the edge of it. The anemone sits well inside such a zone, so every
+  // hover at the edge of it. Their patch sits well inside such a zone, so every
   // target is resampled until it is clear of rock.
   const clearOfRock = (p, scale) =>
     obstacles.every((o) => p.distanceTo(o.center) > o.radius + 0.45 + scale * 0.23);
@@ -5659,7 +5595,7 @@ async function createRiverscape(canvas, options = {}) {
       c.foray = true;
       sample = () => c.target.set(rand(-BOUNDS.x + 0.8, BOUNDS.x - 0.8), clamp(rand(2.2, 6.4), 1.4, 7.6), rand(-2.6, 2.2));
     } else if (roll < 0.46) {
-      // nose into the tentacles, from the open front of the anemone
+      // nose down at the stones, from the open front of their patch
       c.browseNext = true;
       sample = () => c.target.set(HOST.x + rand(-0.6, 0.6), HOST.y + rand(0.4, 0.75), HOST.z + rand(0.1, 0.8));
     } else {
@@ -5791,7 +5727,7 @@ async function createRiverscape(canvas, options = {}) {
       else if (c.mode === 'pause') tilt = Math.sin(c.bob * 0.5) * 0.07 - 0.04;
       c.pitch += (tilt - c.pitch) * Math.min(1, dt * 4.5);
 
-      // a quick shimmy on entering the anemone: the whole fish wags side to side
+      // a quick shimmy on settling in: the whole fish wags side to side
       let wag = 0;
       if (c.shimmy > 0) { c.shimmy -= dt; wag = Math.sin(elapsed * 32) * 0.26 * Math.min(1, c.shimmy * 2); }
 
@@ -5977,7 +5913,7 @@ async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST } };
+  return { feed, showTime, advance, setClockArea, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST } };
 }
 
       const canvas = document.getElementById('scene');
@@ -5997,6 +5933,23 @@ async function createRiverscape(canvas, options = {}) {
       }
       document.getElementById('feed').addEventListener('click', () => habitat && habitat.feed());
       document.getElementById('showtime').addEventListener('click', () => habitat && habitat.showTime());
+      // Keep the clock out from behind the words: measure how much room the text leaves above
+      // it and tell the scene, which lays the digits out in that band.
+      if (habitat && habitat.setClockArea) {
+        const place = () => {
+          if (document.body.classList.contains('full')) return habitat.setClockArea(null, null);
+          const shown = [...document.querySelectorAll('.page h1, .page .sub, .page .cta')].filter((el) => el.getClientRects().length > 0);
+          if (!shown.length) return habitat.setClockArea(null, null);
+          const textTop = Math.min(...shown.map((el) => el.getBoundingClientRect().top));
+          const nav = document.querySelector('.page nav');
+          habitat.setClockArea((nav ? nav.getBoundingClientRect().bottom : 0) + 14, textTop - 22);
+        };
+        window.addEventListener('resize', place);
+        window.addEventListener('aqua-layout', place);
+        new ResizeObserver(place).observe(document.querySelector('.page'));
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+        place();
+      }
       setTimeout(() => boot.setAttribute('data-ready', 'true'), 2500);
     </script>
   
@@ -6017,6 +5970,7 @@ async function createRiverscape(canvas, options = {}) {
         }
         function setFull(on, gesture) {
           body.classList.toggle('full', on);
+          window.dispatchEvent(new Event('aqua-layout'));
           if (on) {
             wake();
             // Real fullscreen where the browser has it. iPhone Safari does not, and

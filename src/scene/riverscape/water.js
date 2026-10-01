@@ -121,7 +121,9 @@ export const surfaceLightGLSL = /* glsl */ `
     // scene, which this tank is explicitly not to have. Only the extinction is
     // kept, so the water keeps its colour and loses its motion.
     float focus = 1.0;
-    vec3 absorption = exp(-vec3(0.020, 0.008, 0.012) * depth);
+    // PATCH (Aqua Clock): bluer water. Habitats' constants (0.020, 0.008, 0.012) let green
+    // through furthest, which is why its tank is green. Here blue goes furthest.
+    vec3 absorption = exp(-vec3(0.022, 0.0085, 0.0055) * depth);
     return focus * absorption;
   }
 `;

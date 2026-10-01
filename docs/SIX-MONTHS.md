@@ -72,7 +72,7 @@ pointing the assistant at a reference to match and, later, giving it a way to ch
 | Size | 10.5 MB app, 28 tetras | one page of about 550 kB (plus three.js from a CDN), 84 tetras and 2 clownfish |
 | Built with | Claude and Gemini AI Studio, alternating, GitHub as the hand-off | Claude Sonnet 5.5, one long conversation, with a real browser to test against |
 | Model | Claude and Gemini AI Studio (versions not stated in the post) | Claude Sonnet 5.5 |
-| Starting point | an open-ended prompt for a flocking fish tank | a reference: Desktop Habitats' tank copied in, its fish-skin lighting adapted, the rest built here |
+| Starting point | an open-ended prompt for a flocking fish tank | a reference: Desktop Habitats' tank copied in (with the driftwood removed, stones added, the planting re-planned and the water colour changed), its fish-skin lighting adapted, the rest built here |
 | Visual target | "aesthetically pleasing": a flat vector scene (see the screenshot) | photoreal, judged against a reference screenshot |
 | What the human did | mediated between the two AIs; aesthetic judgement | aesthetic judgement again ("the green is off", "the food is massive", "not over the time") and one decisive call: use the real code rather than a copy of its look |
 | How it was checked | the post does not describe it | measured, in a headless browser (next section) |

@@ -26,11 +26,9 @@ const TAU = Math.PI * 2;
 // aquascaper tied moss on. Coverage runs 0 (bare) to 1 (dense turf). A slow noise field
 // lowers the threshold unevenly, so patches sit at different stages of growth.
 const MOSS_COLONIES = [
-  // The tied-on clump at the fork of the trunk, and a thinner growth higher up.
-  { center: vec(1.55, 3.07, 0.05), radius: 1.0, strength: 0.75 },
-  { center: vec(2.38, 2.77, 0.15), radius: 0.8, strength: 0.6 },
-  { center: vec(0.98, 3.42, -0.3), radius: 0.65, strength: 0.55 },
-  { center: vec(-0.9, 6.2, -0.95), radius: 0.5, strength: 0.35 },
+  // PATCH (Aqua Clock): moss on the shoulder of our tall stone and its low companion.
+  { center: vec(3.0, 2.9, -0.95), radius: 0.6, strength: 0.45 },
+  { center: vec(2.0, 0.9, -0.1), radius: 0.5, strength: 0.4 },
   // Stone shoulders: the sheltered side of the main stone where the trunk rises past it,
   // the top of the secondary stone, and the low companions. The main stone's face stays
   // mostly bare.
@@ -58,6 +56,17 @@ export const ROCKS = [
   { x: 5.35, z: 1.75, rx: 0.42, ry: 0.34, rz: 0.4, lean: 0.2 },
   { x: 6.0, z: 1.3, rx: 0.38, ry: 0.3, rz: 0.35, lean: 0.2 },
   { x: -2.1, z: 1.55, rx: 0.3, ry: 0.22, rz: 0.28, lean: -0.1 },
+  // PATCH (Aqua Clock): three stones of our own, appended so the indices Habitats' growth
+  // is keyed to do not move: a low one in the front of the middle, a broad one under the
+  // limb of our driftwood, and a larger one at the far left.
+  { x: -1.6, z: 1.9, rx: 0.5, ry: 0.32, rz: 0.45, lean: 0.1 },
+  { x: 1.4, z: 0.2, rx: 0.8, ry: 0.5, rz: 0.7, lean: -0.15 },
+  { x: -7.5, z: -1.2, rx: 0.9, ry: 0.7, rz: 0.8, lean: 0.12 },
+  // PATCH (Aqua Clock): where the wood was: a tall upright stone behind the main stone, with
+  // a low companion in front of it and a small one behind.
+  { x: 3.0, z: -1.3, rx: 0.85, ry: 1.75, rz: 0.75, lean: -0.1 },
+  { x: 2.0, z: -0.4, rx: 0.6, ry: 0.55, rz: 0.55, lean: 0.15 },
+  { x: 3.9, z: -2.2, rx: 0.5, ry: 0.6, rz: 0.45, lean: -0.2 },
 ];
 // A stone is buried to a little under half its height, and deeper the more it leans, so
 // the raised side of a leaning stone still meets the sand.
@@ -68,87 +77,11 @@ export function rockCenterY(rock) {
     Math.abs(rock.lean) * rock.rx * 0.55
   );
 }
-// The driftwood: a trunk rising from behind the main stone to the upper left with a fork
-// at its tip, a limb reaching forward over the stones toward the glass, a stub higher up,
-// and roots at the base that run out over the sand and back behind the main stone. Fish
-// swim around the trunk and the limb; the trunk is also somewhere they go to look.
-const BRANCHES = [
-  {
-    p: [
-      [3.48, 0.37, -0.15],
-      [2.64, 1.52, -0.42],
-      [1.37, 3.6, -0.65],
-      [0.15, 5.25, -0.85],
-      [-1.49, 6.76, -1.05],
-      [-3.33, 7.95, -1.05],
-    ],
-    r: 0.78,
-    t: 0.12,
-    obstacle: true,
-    landmarks: true,
-  },
-  // The fork starts inside the trunk and is thinner than the trunk where it leaves it, so
-  // the join reads as one piece of wood.
-  {
-    p: [
-      [-1.45, 6.7, -1.05],
-      [-2.08, 7.14, -1.17],
-      [-2.17, 7.85, -1.15],
-      [-2.64, 8.43, -1.08],
-    ],
-    r: 0.15,
-    t: 0.017,
-  },
-  {
-    p: [
-      [2.71, 1.36, -0.37],
-      [3.15, 0.95, -0.6],
-      [4.16, 0.36, -0.92],
-      [4.84, 0.17, -0.7],
-    ],
-    r: 0.33,
-    t: 0.012,
-  },
-  {
-    p: [
-      [2.05, 2.75, -0.5],
-      [2.75, 3.15, 0.15],
-      [3.45, 3.4, 0.85],
-      [4.0, 3.7, 1.4],
-    ],
-    r: 0.3,
-    t: 0.03,
-    obstacle: true,
-  },
-  {
-    p: [
-      [0.3, 5.03, -0.82],
-      [-0.23, 5.59, -0.31],
-      [-0.59, 5.76, -0.18],
-    ],
-    r: 0.21,
-    t: 0.012,
-  },
-  {
-    p: [
-      [2.9, 0.84, -0.3],
-      [1.95, 0.48, -0.06],
-      [1.46, 0.14, 0.39],
-      [0.74, 0.13, 0.55],
-    ],
-    r: 0.35,
-    t: 0.02,
-  },
-  {
-    p: [
-      [2.34, 2.12, -0.38],
-      [3.2, 2.58, -1.4],
-      [3.55, 3.14, -1.67],
-    ],
-    r: 0.25,
-    t: 0.022,
-  },
-];
+// PATCH (Aqua Clock): no driftwood. Habitats' trunk is a diagonal across the middle of the
+// tank, where this project's clock sits, and our own attempts at wood did not look right, so
+// the tank is stones and planting instead. The list is kept, empty, so the code that builds
+// wood still runs; a branch added here would be built exactly as before.
+const BRANCHES = [];
 
 function mossCoverage(p, n, shelter, bias = 0) {
   let colony = 0;
@@ -374,18 +307,25 @@ function branchGeometry(points, baseRadius, tipRadius, seed) {
   const length = curve.getLength();
   const rows = Math.ceil(length * 30),
     cols = 96;
+  // PATCH (Aqua Clock): Habitats' branches are all thin, so mapping the bark texture once
+  // round the circumference was fine. On a thick log it stretches the texture several times
+  // wider than it is tall and reads as horizontal slabs. Repeat it in step with the
+  // circumference (a whole number, so it still meets itself at the seam), and make the splits
+  // shallower on thick pieces.
+  const uRepeat = Math.max(1, Math.round(baseRadius / 0.3));
+  const splitScale = Math.min(1, 0.5 / baseRadius);
   const positions = [],
     uv = [],
     indices = [],
     colors = [];
   const frames = curve.computeFrenetFrames(rows, false);
   const splitRandom = randomGenerator(Math.round(seed * 1000) + 51781);
-  const splits = Array.from({ length: 14 }, () => ({
+  const splits = Array.from({ length: 6 }, () => ({
     a: splitRandom() * Math.PI * 2,
     t: splitRandom(),
     width: 0.025 + splitRandom() * 0.09,
     length: 0.025 + splitRandom() * 0.15,
-    depth: 0.08 + splitRandom() * 0.32,
+    depth: (0.08 + splitRandom() * 0.32) * splitScale,
   }));
   for (let i = 0; i <= rows; i++) {
     const t = i / rows,
@@ -397,15 +337,18 @@ function branchGeometry(points, baseRadius, tipRadius, seed) {
     );
     for (let j = 0; j <= cols; j++) {
       const a = (j / cols) * Math.PI * 2;
+      // PATCH (Aqua Clock): long, flowing grain instead of spiralling ridges and warts. On
+      // Habitats' thin branches the original read as bark; on a thick trunk it read as a
+      // gherkin. The ridges barely twist along the length, and the weathering is broad.
       const ridges =
-        0.077 * Math.sin(a * 9 + t * 12 + seed) +
-        0.042 * Math.sin(a * 17 - t * 7) +
-        0.022 * Math.sin(a * 31 + t * 33);
-      const weather = noise(Math.cos(a) * 5 + seed, t * 30, Math.sin(a) * 5);
+        0.05 * Math.sin(a * 9 + t * 2.5 + seed) +
+        0.022 * Math.sin(a * 17 - t * 1.5) +
+        0.008 * Math.sin(a * 31 + t * 4);
+      const weather = noise(Math.cos(a) * 3 + seed, t * 5, Math.sin(a) * 3);
       const channel =
         Math.pow(0.5 + 0.5 * Math.sin(a * 13 + Math.sin(t * 15) * 0.25), 10) *
         0.07;
-      const knot = 1 + 0.15 * Math.exp(-(((t - 0.47) / 0.08) ** 2));
+      const knot = 1 + 0.05 * Math.exp(-(((t - 0.47) / 0.12) ** 2));
       let splitDepth = 0;
       for (const split of splits) {
         const angle = a - split.a - 0.07 * Math.sin(t * 37 + seed);
@@ -421,7 +364,7 @@ function branchGeometry(points, baseRadius, tipRadius, seed) {
         knot *
         (1 +
           ridges +
-          (weather - 0.5) * 0.3 -
+          (weather - 0.5) * 0.12 -
           channel -
           Math.min(0.65, splitDepth));
       const radial = frames.normals[i]
@@ -430,7 +373,7 @@ function branchGeometry(points, baseRadius, tipRadius, seed) {
         .addScaledVector(frames.binormals[i], Math.sin(a));
       const v = p.clone().addScaledVector(radial, r);
       positions.push(v.x, v.y, v.z);
-      uv.push(j / cols, length * t * 0.32);
+      uv.push((j / cols) * uRepeat, length * t * 0.32);
       const tint =
         (0.7 + weather * 0.27 + ridges * 0.7 - channel) *
         (1 - Math.min(0.6, splitDepth * 1.5));
@@ -600,16 +543,20 @@ export async function createEnvironment(scene) {
   const loader = new THREE.TextureLoader();
   const [rockMaterial, woodMaterial, sandMaterial] = await Promise.all([
     surface(loader, "rock_boulder_dry", [1.8, 1.4], 0x62665d, "#2e4315"),
-    surface(loader, "rough_wood", [2.1, 1.4], 0xc3ad8e, "#334a16"),
+    // PATCH (Aqua Clock): a paler, warmer tan, closer to cured driftwood
+    surface(loader, "rough_wood", [2.1, 1.4], 0xeccb9a, "#334a16"),
     surface(loader, "sand_01", [10, 6], 0xf4e5c8, "#5a5a26", "#23401a"),
   ]);
   rockMaterial.normalScale.set(0.85, 0.85);
   woodMaterial.roughness = 0.86;
+  // PATCH (Aqua Clock): softer bark relief, for weathered driftwood rather than raw bark
+  woodMaterial.normalScale.set(0.3, 0.3);
   woodMaterial.normalScale.set(0.8, 0.8);
   sandMaterial.normalScale.set(0.32, 0.32);
 
   const rocks = ROCKS;
-  const woodBase = vec(...BRANCHES[0].p[0]);
+  // PATCH (Aqua Clock): with no wood, sand gathers at the foot of our tall stone instead
+  const woodBase = BRANCHES.length ? vec(...BRANCHES[0].p[0]) : vec(3.0, 0, -1.3);
   // How sheltered the sand is from the flow: against the stones and the foot of the wood,
   // and under the back planting.
   const shelterAt = (x, z) => {
@@ -804,7 +751,7 @@ export async function createEnvironment(scene) {
   // Fronds stand thick on the tied-on wood clump; on stone and sand the growth is a short
   // turf, so the fronds there are few and small.
   plantFronds(scene, [
-    { samples: woodSamples, count: lodCount(1600, LOD.fronds, 120) },
+    { samples: woodSamples, count: woodSamples.length ? lodCount(1600, LOD.fronds, 120) : 0 },
     { samples: rockSamples, count: lodCount(800, LOD.fronds, 80), scale: 0.5 },
     { samples: sandSamples, count: lodCount(80, LOD.fronds, 16), scale: 0.6 },
   ]);

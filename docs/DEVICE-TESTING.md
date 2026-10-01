@@ -9,13 +9,13 @@ nothing about WebKit-specific rendering. Those are yours to measure.
 
 ## 1. Open the live page
 
-Open [https://digitalurban.github.io/aqua-clock-web/](https://digitalurban.github.io/aqua-clock-web/) in Safari on the device. It needs a network connection: three.js
+Open [https://digitalurban.org/Aqua_Clock_Web/](https://digitalurban.org/Aqua_Clock_Web/) in Safari on the device. It needs a network connection: three.js
 loads from jsDelivr and the font from Google Fonts.
 
 Query strings work on the live page, so you can force either profile and compare:
 
-    https://digitalurban.github.io/aqua-clock-web/?quality=lite
-    https://digitalurban.github.io/aqua-clock-web/?quality=rich
+    https://digitalurban.org/Aqua_Clock_Web/?quality=lite
+    https://digitalurban.org/Aqua_Clock_Web/?quality=rich
     ...&fog=grey        # stock fog, for comparing the water colour
     ...#full            # start in the full screen view
 
