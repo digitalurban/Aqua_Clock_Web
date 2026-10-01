@@ -113,7 +113,6 @@ bar. For none at all: open it with `#full`, then Share, Add to Home Screen.
   thins the planting, for phones and older tablets. Both are always multisampled: the
   plants use alpha-to-coverage, which without MSAA breaks up into flickering dots.
 
-There is deliberately **no moving light**: no caustics, light shafts or surface shimmer.
 
 ## Building
 
@@ -131,14 +130,6 @@ Inter font from Google Fonts, so the page needs a network connection.
     tools/                      real-browser tests; see tools/README.md
     docs/                       build notes, device testing, six months of models
 
-## What six months of models changed
-
-The difference in *how* the work got checked turned out to matter more than the difference in
-code, and this repo keeps the tests so the comparison can be made again. The bugs that only
-measurement found (the air stone nobody could see, food that was never drawn, plants breaking
-into dots on an iPhone) are in [docs/SIX-MONTHS.md](docs/SIX-MONTHS.md).
-
-![Plants on a 3x phone screen: stippled before, continuous after](docs/images/iphone-flicker-before-after.jpg)
 
 
 ## Credits and licences
