@@ -7,7 +7,15 @@
 Seven modules are vendored in `src/scene/riverscape/` (`math.js`, `water.js`,
 `environment.js`, `foliage.js`, `broadleaf.js`, `plants.js`, `stemplants.js`). The
 changes are listed in `src/scene/riverscape/NOTICE.md` and marked
-`PATCH (Aqua Clock)` in the source. The licence text below must accompany them.
+`PATCH (Aqua Clock)` in the source.
+
+Also **adapted, not vendored as a file**: the fish body-wall light transport in
+`src/scene/riverscape.js` (the constants `MUSCLE_ABSORPTION`, `TISSUE_SCATTER` and
+`MUSCLE_FLOOR`, and the `fishThrough` shading formula) is taken from Habitats'
+`fish-anatomy.js`. The fish *geometry* is not: Habitats models a bloodfin tetra with its
+own station table, and this project has its own for a neon tetra and a clownfish.
+
+The licence text below must accompany all of it.
 
 ```
 MIT License

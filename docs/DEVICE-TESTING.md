@@ -7,30 +7,30 @@ Safari). That covers logic and layout: behaviour, the clock, the bubbles, screen
 shapes. It says nothing about frame rate, heat or battery on a real device, and
 nothing about WebKit-specific rendering. Those are yours to measure.
 
-## 1. Fastest: open the published preview
+## 1. Open the live page
 
-Open the artifact link in Safari (or the Claude app) on the device, signed in.
-It needs a network connection: three.js loads from jsDelivr, fonts from Google.
+Open [https://digitalurban.github.io/aqua-clock-web/](https://digitalurban.github.io/aqua-clock-web/) in Safari on the device. It needs a network connection: three.js
+loads from jsDelivr and the font from Google Fonts.
 
-**Trap:** the profile is chosen automatically. Touch screens (pointer: coarse) and
-devices with four cores or fewer get `lite`, so an iPad will almost certainly run
-lite. The footer of the page shows which profile is active. To see rich you have to
-force it, and you cannot pass a query string through the artifact viewer.
+Query strings work on the live page, so you can force either profile and compare:
 
-## 2. To force a profile: host the file yourself
+    https://digitalurban.github.io/aqua-clock-web/?quality=lite
+    https://digitalurban.github.io/aqua-clock-web/?quality=rich
+    ...&fog=grey        # stock fog, for comparing the water colour
+    ...#full            # start in the full screen view
 
-Same Wi-Fi, from your Mac, in the folder containing `aquaclock-v3-preview.html`:
+The profile is chosen automatically. Touch screens, and devices with four cores or fewer,
+get `lite`, so an iPad will almost certainly run lite unless you force rich. The footer of
+the page shows which profile is active.
+
+## 2. Or from your own machine, before pushing
+
+Same Wi-Fi, from your Mac, in the folder containing `index.html`:
 
     python3 -m http.server 8000
     ipconfig getifaddr en0          # your Mac's address, e.g. 192.168.1.20
 
-On the device open:
-
-    http://192.168.1.20:8000/aquaclock-v3-preview.html?quality=lite
-    http://192.168.1.20:8000/aquaclock-v3-preview.html?quality=rich
-    ...&fog=grey        # stock fog, for comparing the water colour
-
-Or put the file on GitHub Pages and use the same query strings on that URL.
+then open `http://192.168.1.20:8000/index.html?quality=rich` on the device.
 
 ## 2b. What to look at first on a phone
 

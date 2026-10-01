@@ -4,33 +4,71 @@
 Eighty-four neon tetras drift, feed and shy from your cursor, then, every minute, gather
 into the hour. Two clownfish keep house in an anemone. No install, no account.
 
+### ▶ [Open it: digitalurban.github.io/aqua-clock-web](https://digitalurban.github.io/aqua-clock-web/)
+
+[Source](https://github.com/digitalurban/aqua-clock-web) · [The iPhone and iPad app](https://apps.apple.com/gb/app/aqua-clock/id6760460959) · [How the app was made](https://connected-environments.org/blog/2026-03-20-aqua-clock-vibe-coding-boids-fish-tell-time/)
+
 ![The tank in full screen view: no text, the shoal spelling the time](docs/images/desktop-clean.jpg)
 
+## The story
+
+**Aqua Clock** launched on the [App Store](https://apps.apple.com/gb/app/aqua-clock/id6760460959) in March 2026: a tank where the fish tell
+the time. It was built entirely in conversation with AI, with Claude and Gemini AI Studio
+taking turns and GitHub as the hand-off between them, and written up in
+[*Multi-Model Vibe Coding, Boids, and the Fish That Tell the Time*](https://connected-environments.org/blog/2026-03-20-aqua-clock-vibe-coding-boids-fish-tell-time/).
+
+Six months on, we came across [**Desktop Habitats**](https://github.com/chaseleantj/desktop-habitats), Chase Lean's open-source
+(MIT) macOS aquarium screen saver, whose tank is photoreal: a very different world from
+the app's flat 2D scene. So we asked what a current model could do with it. We pointed
+**Claude Sonnet 5.5** at the Habitats repository and asked for the same idea, fish that
+tell the time, on the web. Over one long conversation it read the Habitats code, brought
+the tank in (with credit, see below), and built the clock, the clownfish, the bubbles and
+their behaviour on top. This repo is the result: a new, web-based Aqua Clock that runs in
+any browser.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/app-march-2026.jpg" alt="Boids in the Aquarium: the Aqua Clock app, March 2026"><br><sub><b>March 2026, the app</b> (screenshot from <a href="https://connected-environments.org/blog/2026-03-20-aqua-clock-vibe-coding-boids-fish-tell-time/">the post</a>). 2D, HTML5 Canvas, 28 tetras, a 10.5 MB iOS app. Built with Claude and Gemini AI Studio.</sub></td>
+<td width="50%"><img src="docs/images/desktop-clean.jpg" alt="This web version, full screen view"><br><sub><b>September 2026, this web version.</b> 3D, WebGL2, 84 tetras and two clownfish, one page of about 550 kB. Built with Claude Sonnet 5.5.</sub></td>
+</tr>
+</table>
+
+How the two builds differ, what was measured, and what the comparison does and does not
+show is in **[docs/SIX-MONTHS.md](docs/SIX-MONTHS.md)**.
+
 > ### Built on Desktop Habitats
-> The tank itself (the substrate, stones, driftwood, moss, planting, and the way light
-> is absorbed by the water) is **[Desktop Habitats](https://github.com/chaseleantj/desktop-habitats)**
-> by Chase Lean, a live wallpaper and screen saver for macOS. It is MIT licensed, and
-> seven of its modules are vendored here, with every change marked
-> ([details](src/scene/riverscape/NOTICE.md)). **If what you want is an aquarium screen
-> saver for your Mac, go to Habitats.** It is a beautiful piece of work and this project
-> would not exist without it. What this repo adds is a clock, a pair of clownfish, glassy
-> bubbles, and a way to run the whole thing on any screen that has a browser.
-> Not affiliated with, or endorsed by, Habitats.
+> This project stands on **[Desktop Habitats](https://github.com/chaseleantj/desktop-habitats)**
+> by Chase Lean, a live wallpaper and screen saver for macOS. It is MIT licensed. **If what
+> you want is an aquarium screen saver for your Mac, go to Habitats.** It is a beautiful
+> piece of work and this project would not exist without it. Exactly how much of it is used,
+> in three tiers:
+>
+> - **Copied.** The tank: substrate, stones, driftwood, moss, planting and the way the water
+>   absorbs light. Seven of its modules are vendored here, two byte-for-byte and the rest
+>   with a handful of marked changes ([which, and why](src/scene/riverscape/NOTICE.md)).
+> - **Adapted.** How light passes through a fish's skin: the constants and formula in
+>   `src/scene/riverscape.js` are taken from its `fish-anatomy.js`.
+> - **Ours, inspired by it.** The fish bodies (a neon tetra and a clownfish, built the way
+>   Habitats builds its bloodfin tetra, lofted cross-sections in fractions of body length, but
+>   with our own proportions) and everything above the tank: the clock, the clownfish
+>   behaviour, the bubbles, the fog, the air stone, the pump and the page.
+>
+> What this repo adds is a clock, a pair of clownfish, glassy bubbles, and a way to run it on
+> any screen with a browser. Not affiliated with, or endorsed by, Habitats.
 
-## Also an iPhone and iPad app
+## The app
 
-**[Aqua Clock on the App Store](https://apps.apple.com/gb/app/aqua-clock/id6760460959)**
-· [Aqua-Clock_Info](https://github.com/digitalurban/Aqua-Clock_Info), the app's site.
+**[Aqua Clock on the App Store](https://apps.apple.com/gb/app/aqua-clock/id6760460959)** · [Aqua-Clock_Info](https://github.com/digitalurban/Aqua-Clock_Info), the app's site.
 
-The app and this page tell the time the same way, but they are different builds. The app
-is a native 2D scene made to sit on a nightstand all night. This is a 3D scene rendered
-live in the browser: more realistic, nothing to install, and heavier. Leaving that much
-GPU work running all night on a phone is the reason it is not simply *in* the app; see
+The app and this page tell the time the same way, but they are different builds. The app is
+a native 2D scene made to sit on a nightstand all night. This is a 3D scene rendered live in
+the browser: more realistic, nothing to install, and heavier. Leaving that much GPU work
+running all night on a phone is the reason it is not simply *in* the app; see
 [docs/DEVICE-TESTING.md](docs/DEVICE-TESTING.md).
 
 ## Try it
 
-**Live:** <!-- add the GitHub Pages address here once Pages is switched on -->
+**Live: [https://digitalurban.github.io/aqua-clock-web/](https://digitalurban.github.io/aqua-clock-web/)**
 
 - **Show the time** gathers the shoal into the hour straight away (otherwise it does it
   for the first fifteen seconds of every minute).
@@ -90,17 +128,12 @@ Inter font from Google Fonts, so the page needs a network connection.
     tools/                      real-browser tests; see tools/README.md
     docs/                       build notes, device testing, six months of models
 
-## How this was built, and what six months changed
+## What six months of models changed
 
-The iOS app was built about six months ago. This web version was built recently, in one
-long conversation with one assistant that could, by the end, run the page in a real
-browser and measure it. The difference in *how* the work got checked turned out to matter
-more than the difference in code, and this repo keeps the tests so the comparison can be
-made again.
-
-**[docs/SIX-MONTHS.md](docs/SIX-MONTHS.md)** has the then-and-now, the bugs that only
-measurement found (with numbers), and a protocol for re-running the same project with a
-newer model.
+The difference in *how* the work got checked turned out to matter more than the difference in
+code, and this repo keeps the tests so the comparison can be made again. The bugs that only
+measurement found (the air stone nobody could see, food that was never drawn, plants breaking
+into dots on an iPhone) are in [docs/SIX-MONTHS.md](docs/SIX-MONTHS.md).
 
 ![Plants on a 3x phone screen: stippled before, continuous after](docs/images/iphone-flicker-before-after.jpg)
 
@@ -121,6 +154,7 @@ trusting it; [docs/DEVICE-TESTING.md](docs/DEVICE-TESTING.md) says how.
 | **Poly Haven** textures | Rock Boulder Dry, Rough Wood, Sand 01 | CC0 |
 | **three.js** | three.js authors | MIT |
 | **Inter** (typeface) | Rasmus Andersson | SIL OFL, from Google Fonts |
+| **Claude Sonnet 5.5** | Anthropic | built this web version with the author |
 
 The code in this repo is MIT ([LICENSE](LICENSE)). Full notices in
 [THIRD-PARTY.md](THIRD-PARTY.md).
