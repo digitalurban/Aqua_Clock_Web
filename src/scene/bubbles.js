@@ -161,7 +161,7 @@ export function createBubbles(scene, cfg) {
   function spawnPump() {
     const b = take(); if (!b) return;
     b.on = true; b.kind = 1; b.age = 0;
-    b.x = pump.x + 1.55; b.y = pump.y - 0.1 + rand(-0.2, 0.2); b.z = pump.z + rand(-0.55, 0.3);
+    b.x = pump.x + (pump.outlet ?? 1.55); b.y = pump.y - 0.1 + rand(-0.2, 0.2); b.z = pump.z + rand(-0.55, 0.3);
     b.r0 = b.r = rand(0.016, 0.036);
     b.vx = rand(2.2, 3.6); b.vy = rand(-0.25, 0.1);
     b.freq = rand(2, 5); b.phase = rand(0, 6.283);

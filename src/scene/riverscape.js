@@ -1073,24 +1073,53 @@ export async function createRiverscape(canvas, options = {}) {
 
   const BED = (x, z) => groundHeight(x, z);
 
-  const PUMP = { x: -7.9, y: 8.5, z: 1.4 };
-  {
-    const housing = new THREE.Mesh(
-      new THREE.BoxGeometry(1.9, 1.5, 1.1),
-      new THREE.MeshStandardMaterial({ color: '#0f1316', roughness: 0.45, metalness: 0.3 }),
-    );
-    housing.position.set(PUMP.x, PUMP.y, PUMP.z);
-    housing.castShadow = true;
-    scene.add(housing);
+  // The pump sits at the left edge, cropped by the screen. The full screen view uses a wider
+  // lens, which would show the whole housing as a plain black box in the corner, so in that
+  // mode it moves further out (see setFullView).
+  let fullView = false;
+  // x is where its body is centred; `outlet` is how far to the right of that the water leaves
+  // the nozzle, which is where the bubbles it entrains begin.
+  const PUMP = { x: -7.9, y: 8.5, z: 1.4, outlet: 1.2 };
 
-    const nozzle = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18, 0.23, 0.7, 12),
-      new THREE.MeshStandardMaterial({ color: '#161c20', roughness: 0.5 }),
-    );
-    nozzle.rotation.z = Math.PI / 2;
-    nozzle.position.set(PUMP.x + 1.25, PUMP.y - 0.1, PUMP.z);
-    scene.add(nozzle);
+  /*
+   * A small aquarium pump of the kind that hangs in a tank on a suction cup: a rounded
+   * cylindrical body with two raised bands, a darker rear cap, a tapered outlet nozzle with a
+   * lighter rim, a short intake stub on top, and a power cable that loops up and out of the
+   * water. It is about half the size of the black box it replaces.
+   */
+  function buildPump() {
+    const group = new THREE.Group();
+    const dark = (color, roughness = 0.5, metalness = 0.2) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
+    const bodyMat = dark('#37444f'), capMat = dark('#1f272d'), bandMat = dark('#566673', 0.4, 0.3), nozzleMat = dark('#415059'), cableMat = dark('#0b0d0f', 0.7, 0);
+    const part = (geometry, material, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.rotation.set(rx, ry, rz);
+      mesh.castShadow = true;
+      group.add(mesh);
+      return mesh;
+    };
+    const along = Math.PI / 2; // cylinders stand on y; this lays them along x
+    part(new THREE.CylinderGeometry(0.4, 0.43, 1.0, 28), bodyMat, 0, 0, 0, 0, 0, along);              // the body
+    part(new THREE.CylinderGeometry(0.33, 0.37, 0.32, 24), capMat, -0.64, 0, 0, 0, 0, along);        // the motor cap
+    part(new THREE.TorusGeometry(0.43, 0.024, 8, 32), bandMat, -0.18, 0, 0, 0, along, 0);            // two raised bands
+    part(new THREE.TorusGeometry(0.43, 0.024, 8, 32), bandMat, 0.2, 0, 0, 0, along, 0);
+    part(new THREE.CylinderGeometry(0.16, 0.3, 0.5, 24), nozzleMat, 0.75, 0, 0, 0, 0, -along);       // the outlet, narrowing to the right
+    part(new THREE.TorusGeometry(0.16, 0.03, 8, 24), bandMat, 1.0, 0, 0, 0, along, 0);               // its rim
+    part(new THREE.CylinderGeometry(0.13, 0.16, 0.28, 18), capMat, -0.12, 0.5, 0);                   // the intake stub on top
+    part(new THREE.CylinderGeometry(0.15, 0.15, 0.04, 18), bandMat, -0.12, 0.66, 0);                 // and its cap
+    // the power cable: out of the rear cap, curling up and away above the water
+    const cable = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-0.8, 0.05, 0), new THREE.Vector3(-1.0, 0.6, 0), new THREE.Vector3(-0.85, 1.5, 0),
+      new THREE.Vector3(-0.95, 2.8, 0), new THREE.Vector3(-0.9, 6.0, 0),
+    ]);
+    const cableMesh = new THREE.Mesh(new THREE.TubeGeometry(cable, 40, 0.035, 6, false), cableMat);
+    group.add(cableMesh);
+    return group;
   }
+  const pumpGroup = buildPump();
+  pumpGroup.position.set(PUMP.x, PUMP.y, PUMP.z);
+  scene.add(pumpGroup);
 
   // An air stone is a small pale porous cylinder, not a black one. It sits on
   // open sand clear of the hero text, and every bubble in the tank comes from
@@ -1481,6 +1510,30 @@ export async function createRiverscape(canvas, options = {}) {
     }
     return frame;
   }
+  /*
+   * The full screen view zooms out a little. The page calls this whenever that mode is
+   * entered or left. Everything that depends on the lens (the clock's layout, the air
+   * stone, the snails' strip) is worked out again from the camera in resize(), and the pump
+   * moves so the wider lens does not show its whole housing.
+   */
+  function setFullView(on) {
+    on = !!on;
+    if (on === fullView) return;
+    fullView = on;
+    resize(); // which also places the pump
+  }
+  // The pump sits at the left edge, partly cropped, as it always has. In the full screen view
+  // on a landscape screen the lens is wide enough to show all of it, so it is set a little in
+  // from the edge, whatever the screen's width. Upright screens keep it out of view.
+  function placePump() {
+    if (fullView && camera.aspect >= 1.25) {
+      const halfWidth = Math.tan((camera.fov * Math.PI) / 360) * camera.aspect * (camera.position.z - PUMP.z);
+      PUMP.x = -(halfWidth - 1.4);
+    } else {
+      PUMP.x = -7.9;
+    }
+    pumpGroup.position.x = PUMP.x; // the bubbles read PUMP.x each time one is made
+  }
   function setClockArea(top, bottom) {
     // a band too thin to hold digits is ignored, and the default layout is used
     clockArea = top != null && bottom != null && bottom - top > 80 ? { top, bottom } : null;
@@ -1847,7 +1900,11 @@ export async function createRiverscape(canvas, options = {}) {
     // Riverscape's lens is tuned for a landscape screen. On a narrow one it would
     // show a slice of tank barely four units wide, so the lens widens as the
     // screen narrows (to at most 42 degrees) rather than losing the scene.
-    camera.fov = camera.aspect < 1.25 ? clamp(25.8 * Math.sqrt(1.25 / camera.aspect), 25.8, 42) : 25.8;
+    // Habitats' own lens is 25.8 degrees. The full screen view is wider (38), so much more of
+    // the tank shows. Narrower screens widen it further (up to 42), as they always did, so
+    // the upright phone view is unchanged; taking the larger of the two keeps it continuous as
+    // a window changes shape.
+    camera.fov = Math.max(fullView ? 38 : 25.8, clamp(25.8 * Math.sqrt(1.25 / camera.aspect), 25.8, 42));
     // a wider lens also sees further down, past the end of the substrate, so it
     // looks up a little as it widens
     camera.lookAt(0, 4.15 + (camera.fov - 25.8) * 0.07, 0);
@@ -1855,6 +1912,7 @@ export async function createRiverscape(canvas, options = {}) {
     camera.updateMatrixWorld(true);
     placeStone();
     snails.setArea(snailArea());
+    placePump();
     bubbles.setViewport(renderer.domElement.height, camera.fov);
     assignments = clockAssignments(new Date(), viewFrame());
   }
@@ -1893,5 +1951,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea } };
+  return { feed, showTime, advance, setClockArea, setFullView, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea } };
 }

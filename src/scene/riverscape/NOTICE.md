@@ -8,7 +8,7 @@
 planting, foliage and water lighting.
 
 `math.js` and `foliage.js` are unchanged. Every other change is marked
-`PATCH (Aqua Clock)` in the source and is one of seven kinds:
+`PATCH (Aqua Clock)` in the source and is one of eight kinds:
 
 1. **Textures** (`environment.js`): the Poly Haven maps are loaded from inlined data URIs
    rather than a relative `assets/` path, because the page is a single self-contained file.
@@ -39,6 +39,12 @@ planting, foliage and water lighting.
    stand of stem plants behind it and low rosettes round the stones; the grass beds re-weighted (the right bed heavier, the
    middle-back thinned and lowered); the middle-back feathery stand lowered; and the three
    fern tufts that sat on Habitats' trunk moved into the crevices of our stones.
+
+8. **Sand width** (`environment.js`): the sand mesh is 44 wide, not 24, with the vertex density
+   kept (367 segments across, not 200) and its texture repeated 18 times across it, not 10, so
+   the grain stays the same size. Habitats' 24 is just wide enough for its own lens; this
+   project's full screen view is wider, and showed the ends of the sand as the edges of an
+   island. The ground's shape is an analytic function, so nothing else depends on the width.
 
 The Poly Haven textures (`../textures.js`) are CC0: Rock Boulder Dry, Rough Wood and
 Sand 01, downscaled to 512px. See `THIRD-PARTY.md` at the repo root.

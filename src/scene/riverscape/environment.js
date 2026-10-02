@@ -545,7 +545,9 @@ export async function createEnvironment(scene) {
     surface(loader, "rock_boulder_dry", [1.8, 1.4], 0x62665d, "#2e4315"),
     // PATCH (Aqua Clock): a paler, warmer tan, closer to cured driftwood
     surface(loader, "rough_wood", [2.1, 1.4], 0xeccb9a, "#334a16"),
-    surface(loader, "sand_01", [10, 6], 0xf4e5c8, "#5a5a26", "#23401a"),
+    // PATCH (Aqua Clock): the sand is 44 wide, not 24 (see `ground` below), so its texture repeats
+    // 18 times across it, not 10, which keeps the grain the same size.
+    surface(loader, "sand_01", [18, 6], 0xf4e5c8, "#5a5a26", "#23401a"),
   ]);
   rockMaterial.normalScale.set(0.85, 0.85);
   woodMaterial.roughness = 0.86;
@@ -591,7 +593,10 @@ export async function createEnvironment(scene) {
     }
   };
 
-  const ground = new THREE.PlaneGeometry(24, 18, 200, 140);
+  // PATCH (Aqua Clock): 44 wide, to match the back panel, with the same vertex density. Habitats'
+  // 24 is just wide enough for its own lens; the full screen view here is wider, and showed the
+  // ends of the sand as the edges of an island.
+  const ground = new THREE.PlaneGeometry(44, 18, 367, 140);
   ground.rotateX(-Math.PI / 2);
   const position = ground.attributes.position;
   const groundColors = [];

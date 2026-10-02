@@ -41,8 +41,9 @@ model and iOS version. The footer says `render lite` or `render rich`.
 
 ## 2c. Full screen
 
-Tap **Full screen**. All text goes; tap or move to bring back three icons (time,
-feed, exit) for three seconds. `F` toggles and `Esc` leaves it on a keyboard.
+Tap **Full screen**. All text goes, the view zooms out (a wider lens, so more of the
+tank shows), and tapping or moving brings back three icons (time, feed, exit) for
+three seconds. `F` toggles and `Esc` leaves it on a keyboard.
 iPad Safari may go truly fullscreen; iPhone Safari cannot, so the text hides but the
 address bar stays. For no browser chrome at all: open the page with `#full` on the
 end, then Share > Add to Home Screen, and launch it from the icon. Not tested on a
