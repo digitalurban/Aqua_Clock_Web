@@ -47,9 +47,15 @@ _bub = _bub.replace('export function createBubbles', 'function createBubbles')
 bundle.append('const createBubbles = (function () {\n' + _bub + '\nreturn createBubbles;\n})();')
 bundle.append('const { createEnvironment, createParticles, createPlants, groundHeight,\n'
               '        SURFACE_Y, waterLitShader, waterTime, setLOD } = __ns;')
+# snails.js has its own top-level names too, and needs waterLitShader, so it goes in an IIFE
+# after the line above
+_sn = open('src/scene/snails.js').read()
+_sn = re.sub(r'^import .*\n', '', _sn, flags=re.M)
+_sn = _sn.replace('export function createSnails', 'function createSnails')
+bundle.append('const createSnails = (function () {\n' + _sn + '\nreturn createSnails;\n})();')
 
 scene = open('src/scene/riverscape.js').read()
-scene = re.sub(r"import \{[^}]*\} from '\./(riverscape/[a-z]+|textures|bubbles)\.js';\n", '', scene)
+scene = re.sub(r"import \{[^}]*\} from '\./(riverscape/[a-z]+|textures|bubbles|snails)\.js';\n", '', scene)
 scene = scene.replace('export function setFishDetail', 'function setFishDetail')
 scene = scene.replace("import * as THREE from 'three';", '')
 scene = scene.replace('export async function createRiverscape', 'async function createRiverscape')

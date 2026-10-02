@@ -17,6 +17,7 @@ import { groundHeight } from './riverscape/math.js';
 import { SURFACE_Y, waterLitShader, waterTime } from './riverscape/water.js';
 import { setLOD } from './riverscape/lod.js';
 import { createBubbles } from './bubbles.js';
+import { createSnails } from './snails.js';
 
 /* ---------------------------------------------------------------- */
 /* Tunables                                                          */
@@ -1143,6 +1144,28 @@ export async function createRiverscape(canvas, options = {}) {
     lite, surfaceY: SURFACE_Y, stone: STONE, pump: PUMP, bedAt: BED,
   });
 
+  // Snails on the front glass, down the right-hand side: they crawl, pause, and sometimes
+  // draw back into their shells.
+  const GLASS_Z = 3.55; // the inside of the front glass, in front of the planting
+  const snails = createSnails(scene, { count: 2, glassZ: GLASS_Z });
+
+  // The strip of front glass the snails may use: down the right-hand side, clear of the clock
+  // (whose right edge is at about 81% of the width) and of the words (left and bottom), and
+  // worked out from the camera, so it holds at any screen shape.
+  const glassRay = new THREE.Vector3();
+  function glassPoint(nx, ny) {
+    camera.updateMatrixWorld(true);
+    glassRay.set(nx, ny, 0.5).unproject(camera).sub(camera.position);
+    const t = (GLASS_Z - camera.position.z) / glassRay.z;
+    return [camera.position.x + t * glassRay.x, camera.position.y + t * glassRay.y];
+  }
+  function snailArea() {
+    const [x0, y0] = glassPoint(0.7, -0.5);
+    const [x1, y1] = glassPoint(0.94, 0.55);
+    return { minX: Math.min(x0, x1), maxX: Math.max(x0, x1), minY: Math.min(y0, y1), maxY: Math.max(y0, y1) };
+  }
+  snails.setArea(snailArea());
+
   /* -- the clownfish's patch ------------------------------------------ */
   // They used to keep house in an anemone. Its tentacles rendered as spiky shards, so it
   // went. The pair keep the same patch of tank, in the nook in front of the left-hand
@@ -1725,6 +1748,7 @@ export async function createRiverscape(canvas, options = {}) {
     formStrength += ((clockMode ? 1 : 0) - formStrength) * Math.min(1, dt * 3);
 
     bubbles.update(dt, elapsed);
+    snails.update(dt, elapsed);
 
     for (let i = pellets.length - 1; i >= 0; i--) {
       const pellet = pellets[i];
@@ -1830,6 +1854,7 @@ export async function createRiverscape(canvas, options = {}) {
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
     placeStone();
+    snails.setArea(snailArea());
     bubbles.setViewport(renderer.domElement.height, camera.fov);
     assignments = clockAssignments(new Date(), viewFrame());
   }
@@ -1868,5 +1893,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST } };
+  return { feed, showTime, advance, setClockArea, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea } };
 }

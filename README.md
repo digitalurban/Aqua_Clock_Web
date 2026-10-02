@@ -52,7 +52,7 @@ any browser.
 > - **Ours, inspired by it.** The fish bodies (a neon tetra and a clownfish, built the way
 >   Habitats builds its bloodfin tetra, lofted cross-sections in fractions of body length, but
 >   with our own proportions) and everything above the tank: the clock, the clownfish
->   behaviour, the bubbles, the fog, the air stone, the pump and the page.
+>   behaviour, the bubbles, the fog, the air stone, the pump, the snails and the page.
 >
 > What this repo adds is our previous concept of fish telling the time, a pair of clownfish, glassy bubbles, and a hosted web page tuned for phones and tablets. Not affiliated with, or endorsed by, Habitats or Chase Lean.
 
@@ -107,6 +107,11 @@ bar. For none at all: open it with `#full`, then Share, Add to Home Screen.
 - **Bubbles.** Glassy sprites (bright rim, specular glint, dark hairline edge) rather than
   dots: a plume from a half-buried air stone that widens and grows as it rises, micro-bubbles
   thrown by the pump, and the odd bubble pearling off a leaf.
+- **Snails.** Two snails crawl slowly over the front glass, down the right-hand side, clear of
+  the clock and the words. As on a real tank's glass, you see the pale foot against the glass
+  with the head and tentacles at the front and the shell on its back, behind it. They pause,
+  and sometimes draw back under the shell, shut it with their horny plate, and ease out again.
+  They came from the original app.
 - **Water.** Per-channel fog, so distance turns the tank blue-teal rather than grey;
   and Habitats' own light model for everything under it.
 - **Two profiles.** `rich` is Riverscape as published. `lite` drops the shadow pass and
@@ -125,6 +130,7 @@ Inter font from Google Fonts, so the page needs a network connection.
 
     src/scene/riverscape.js     the scene: shoal, clock, clownfish, pump, air stone
     src/scene/bubbles.js        the bubble system
+    src/scene/snails.js         the snails
     src/scene/riverscape/       Habitats' modules (vendored) + lod.js
     src/scene/textures.js       Poly Haven CC0 maps, inlined
     tools/                      real-browser tests; see tools/README.md
