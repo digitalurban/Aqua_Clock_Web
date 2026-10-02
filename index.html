@@ -216,6 +216,23 @@
       .page .sub, .page footer {
         text-shadow: 0 0 2px rgba(3, 12, 18, 0.95), 0 0 9px rgba(3, 12, 18, 0.9), 0 0 22px rgba(3, 12, 18, 0.65);
       }
+      /* ---- reaching Full screen on a phone ----
+         The button at the top right can sit under a browser's or viewer's own header, or a notch,
+         and then it cannot be reached. On touch screens and small windows there is a second one in
+         the button row, down where the thumb is, and the top one steps aside. The page also keeps
+         clear of the notch and rounded corners. */
+      .cta { flex-wrap: wrap; align-items: center; }
+      .iconbtn { display: none; width: 44px; height: 44px; padding: 0; align-items: center; justify-content: center; }
+      .iconbtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+      @media (pointer: coarse), (max-width: 760px), (max-height: 500px) {
+        .iconbtn { display: inline-flex; }
+        #fullview { display: none; }
+      }
+      .page { padding-left: max(28px, env(safe-area-inset-left, 0px)); padding-right: max(28px, env(safe-area-inset-right, 0px)); }
+      nav { padding-top: max(22px, env(safe-area-inset-top, 0px)); }
+      @media (max-width: 760px) {
+        .page { padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+      }
       /* a quiet link to the source, in the footer */
       /* padding with an equal negative margin: a thumb-sized target that does not move the layout */
       footer a.gh { display: inline-block; padding: 14px 10px; margin: -14px -10px; color: rgba(220, 236, 228, 0.78); text-decoration: underline; text-decoration-color: rgba(220, 236, 228, 0.3); text-underline-offset: 3px; }
@@ -283,6 +300,7 @@
           <div class="cta">
             <button class="primary" id="showtime" type="button">Show the time</button>
             <button class="pill" id="feed" type="button">Feed the fish</button>
+          <button class="pill iconbtn" id="fullview2" type="button" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
           </div>
         </div>
       </main>
@@ -5396,7 +5414,11 @@ async function createRiverscape(canvas, options = {}) {
   let fullView = false;
   // x is where its body is centred; `outlet` is how far to the right of that the water leaves
   // the nozzle, which is where the bubbles it entrains begin.
-  const PUMP = { x: -7.9, y: 8.5, z: 1.4, outlet: 1.2 };
+  // It hangs near the back glass, from a suction cup stuck to it, so it looks held and not
+  // floating. Being farther from the camera it would look smaller, so it is scaled up by the
+  // ratio of the distances: on screen it is the size it was when it hung nearer the front.
+  const PUMP_Z = -6.3, PUMP_SCALE = (20.5 - PUMP_Z) / (20.5 - 1.4);
+  const PUMP = { x: -7.9 * PUMP_SCALE, y: 8.6, z: PUMP_Z, outlet: 1.2 * PUMP_SCALE };
 
   /*
    * A small aquarium pump of the kind that hangs in a tank on a suction cup: a rounded
@@ -5432,10 +5454,34 @@ async function createRiverscape(canvas, options = {}) {
     ]);
     const cableMesh = new THREE.Mesh(new THREE.TubeGeometry(cable, 40, 0.035, 6, false), cableMat);
     group.add(cableMesh);
+
+    // The suction cup it hangs from, stuck to the back glass above the pump (the glass is 0.64
+    // behind it, in the pump's own units), with a short strap down to the intake stub: wide rim
+    // against the glass, a pale ring round it, a nub, and the strap.
+    const glass = -(PUMP_Z + 7.2) / PUMP_SCALE;   // where the glass is, in the pump's own units
+    const cupMat = new THREE.MeshStandardMaterial({ color: '#8aa0ae', roughness: 0.25, metalness: 0, transparent: true, opacity: 0.75 });
+    const cx = -0.1, cy = 1.3;
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.34, 0.14, 28), cupMat);
+    cup.rotation.x = Math.PI / 2;               // narrow end toward the pump, wide rim on the glass
+    cup.position.set(cx, cy, glass + 0.07);
+    group.add(cup);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.032, 8, 32), new THREE.MeshStandardMaterial({ color: '#b3c4cf', roughness: 0.35 }));
+    rim.position.set(cx, cy, glass + 0.02);
+    group.add(rim);
+    const nub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 12), bandMat);
+    nub.rotation.x = Math.PI / 2;
+    nub.position.set(cx, cy, glass + 0.2);
+    group.add(nub);
+    const strap = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(cx, cy, glass + 0.25), new THREE.Vector3(cx, cy - 0.15, glass * 0.55),
+      new THREE.Vector3(-0.12, 0.88, glass * 0.15), new THREE.Vector3(-0.12, 0.68, 0),
+    ]);
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(strap, 24, 0.045, 8, false), dark('#3b4852', 0.5, 0.2)));
     return group;
   }
   const pumpGroup = buildPump();
   pumpGroup.position.set(PUMP.x, PUMP.y, PUMP.z);
+  pumpGroup.scale.setScalar(PUMP_SCALE);
   scene.add(pumpGroup);
 
   // An air stone is a small pale porous cylinder, not a black one. It sits on
@@ -5845,9 +5891,9 @@ async function createRiverscape(canvas, options = {}) {
   function placePump() {
     if (fullView && camera.aspect >= 1.25) {
       const halfWidth = Math.tan((camera.fov * Math.PI) / 360) * camera.aspect * (camera.position.z - PUMP.z);
-      PUMP.x = -(halfWidth - 1.4);
+      PUMP.x = -(halfWidth - 1.4 * PUMP_SCALE);
     } else {
-      PUMP.x = -7.9;
+      PUMP.x = -7.9 * PUMP_SCALE;
     }
     pumpGroup.position.x = PUMP.x; // the bubbles read PUMP.x each time one is made
   }
@@ -6344,6 +6390,7 @@ async function createRiverscape(canvas, options = {}) {
           }
         }
         $('fullview').addEventListener('click', () => setFull(true, true));
+        const fv2 = $('fullview2'); if (fv2) fv2.addEventListener('click', () => setFull(true, true));
         $('fu-exit').addEventListener('click', () => setFull(false));
         $('fu-time').addEventListener('click', () => { $('showtime').click(); wake(); });
         $('fu-feed').addEventListener('click', () => { $('feed').click(); wake(); });
