@@ -5150,7 +5150,7 @@ function createShafts(scene, { lite = false } = {}) {
   const geometry = new THREE.PlaneGeometry(1, 1);
   geometry.translate(0, -0.5, 0); // hangs down from its top edge, which is at the surface
   const group = new THREE.Group();
-  group.position.y = SURFACE_Y;
+  group.position.y = SURFACE_Y + 4;   // the beams start above the top of the picture, so none has a visible top end
   scene.add(group);
   const beams = [];
   for (let i = 0; i < count; i++) {
@@ -5160,7 +5160,7 @@ function createShafts(scene, { lite = false } = {}) {
       transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
     });
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.scale.set(rand(1.1, 2.6), rand(8.4, 9.6), 1);
+    mesh.scale.set(rand(1.1, 2.6), rand(12.4, 13.6), 1);
     const pivot = new THREE.Group();
     pivot.add(mesh);
     group.add(pivot);
@@ -6417,6 +6417,7 @@ async function createRiverscape(canvas, options = {}) {
   // seen from below, and the beams that come down through it.
   const daylight = createDaylight({ scene, renderer, hemi, key, fill, back, backboard, lite });
   const waterSurface = createSurface(scene, { lite });
+  waterSurface.mesh.visible = false;   // off by default; ?surface=on shows the rippled underside of the water
   const shafts = createShafts(scene, { lite });
 
   // The sand the shrimp may walk on: from the back of the front stones to where the bottom of
@@ -7163,8 +7164,10 @@ async function createRiverscape(canvas, options = {}) {
     snails.setArea(snailArea());
     placePump();
     shrimp.setArea(shrimpArea());
-    // the surface is drawn now, so the bubbles pop at it
-    bubbles.setSurface(SURFACE_Y);
+    // The surface is not drawn (unless ?surface=on), so the bubbles pop just past the top edge of the
+    // picture, not at the waterline: never below the real surface; the pump's own is worked out at its
+    // depth, far back at the glass.
+    bubbles.setSurface(Math.max(SURFACE_Y, topOfFrameAt(STONE.z) + 1.2), Math.max(SURFACE_Y, topOfFrameAt(PUMP.z) + 1.2));
     bubbles.setViewport(renderer.domElement.height, camera.fov);
     assignments = clockAssignments(new Date(), viewFrame());
   }
@@ -7227,7 +7230,7 @@ async function createRiverscape(canvas, options = {}) {
       const showLight = (text) => { lightLabel.textContent = text; lightLabel.classList.add('show'); clearTimeout(lightTimer); lightTimer = setTimeout(() => lightLabel.classList.remove('show'), 2000); };
       document.getElementById('fu-light').addEventListener('click', () => showLight(habitat.cycleLight()));
       window.addEventListener('keydown', (e) => { if ((e.key === 'l' || e.key === 'L') && !e.metaKey && !e.ctrlKey && !e.altKey) showLight(habitat.cycleLight()); });
-      { const q = new URLSearchParams(location.search); const want = q.get('light') || q.get('time'); if (want) habitat.setLight(want); if (q.get('surface') === 'off') habitat.setSurfaceVisible(false); }
+      { const q = new URLSearchParams(location.search); const want = q.get('light') || q.get('time'); if (want) habitat.setLight(want); if (q.get('surface') === 'on') habitat.setSurfaceVisible(true); }
       document.getElementById('feed').addEventListener('click', () => habitat && habitat.feed());
       document.getElementById('showtime').addEventListener('click', () => habitat && habitat.showTime());
       // Keep the clock out from behind the words: measure how much room the text leaves above

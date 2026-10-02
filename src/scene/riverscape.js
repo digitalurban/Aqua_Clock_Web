@@ -1237,6 +1237,7 @@ export async function createRiverscape(canvas, options = {}) {
   // seen from below, and the beams that come down through it.
   const daylight = createDaylight({ scene, renderer, hemi, key, fill, back, backboard, lite });
   const waterSurface = createSurface(scene, { lite });
+  waterSurface.mesh.visible = false;   // off by default; ?surface=on shows the rippled underside of the water
   const shafts = createShafts(scene, { lite });
 
   // The sand the shrimp may walk on: from the back of the front stones to where the bottom of
@@ -1983,8 +1984,10 @@ export async function createRiverscape(canvas, options = {}) {
     snails.setArea(snailArea());
     placePump();
     shrimp.setArea(shrimpArea());
-    // the surface is drawn now, so the bubbles pop at it
-    bubbles.setSurface(SURFACE_Y);
+    // The surface is not drawn (unless ?surface=on), so the bubbles pop just past the top edge of the
+    // picture, not at the waterline: never below the real surface; the pump's own is worked out at its
+    // depth, far back at the glass.
+    bubbles.setSurface(Math.max(SURFACE_Y, topOfFrameAt(STONE.z) + 1.2), Math.max(SURFACE_Y, topOfFrameAt(PUMP.z) + 1.2));
     bubbles.setViewport(renderer.domElement.height, camera.fov);
     assignments = clockAssignments(new Date(), viewFrame());
   }

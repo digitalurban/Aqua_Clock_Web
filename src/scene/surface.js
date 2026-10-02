@@ -130,7 +130,7 @@ export function createShafts(scene, { lite = false } = {}) {
   const geometry = new THREE.PlaneGeometry(1, 1);
   geometry.translate(0, -0.5, 0); // hangs down from its top edge, which is at the surface
   const group = new THREE.Group();
-  group.position.y = SURFACE_Y;
+  group.position.y = SURFACE_Y + 4;   // the beams start above the top of the picture, so none has a visible top end
   scene.add(group);
   const beams = [];
   for (let i = 0; i < count; i++) {
@@ -140,7 +140,7 @@ export function createShafts(scene, { lite = false } = {}) {
       transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
     });
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.scale.set(rand(1.1, 2.6), rand(8.4, 9.6), 1);
+    mesh.scale.set(rand(1.1, 2.6), rand(12.4, 13.6), 1);
     const pivot = new THREE.Group();
     pivot.add(mesh);
     group.add(pivot);
