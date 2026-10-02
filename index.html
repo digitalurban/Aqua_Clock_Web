@@ -4155,45 +4155,46 @@ function makeSnail(size, geo, mats) {
 
   // the shell: tilted back over the tail, as a snail carries it, and lifted off the glass
   const shell = new THREE.Mesh(geo.shell, mats.shell);
-  shell.rotation.y = -0.95;
-  shell.position.set(-0.12, 0, 0.46);
+  shell.rotation.y = -0.35; // a slight tilt: more would push the shell's bulk toward the tail
+  shell.position.set(0.32, 0, 0.24); // over the middle of the animal
   flip.add(shell);
   // the soft body under the shell, which shows round the foot
   const mass = new THREE.Mesh(geo.sphere, mats.mass);
-  mass.scale.set(0.42, 0.34, 0.24);
-  mass.position.set(-0.12, 0, 0.2);
+  mass.scale.set(0.2, 0.16, 0.12); // just the neck of soft body where it joins the shell: the shell itself is what shows
+  mass.position.set(0.28, 0, 0.14);
   flip.add(mass);
   // the horny plate that shuts the shell: seen only when the snail is drawn in
   const operculum = new THREE.Mesh(geo.disc, mats.operculum);
   operculum.scale.set(0.26, 0.2, 1);
-  operculum.position.set(0.28, 0, 0.03);
+  operculum.position.set(0.62, 0, 0.03);
   operculum.rotation.x = Math.PI; // faces you
   flip.add(operculum);
 
   // everything that goes back under the shell hangs off one group, so retracting is one scale
   const body = new THREE.Group();
+  body.position.x = 0.32; // the shell's centre: the pivot it draws in about
   flip.add(body);
   const foot = new THREE.Mesh(geo.sphere, mats.foot);
-  foot.scale.set(1.0, 0.24, 0.05);
-  foot.position.set(0.15, 0, 0.05); // spans about -0.85 to +1.15: a tail behind the shell, a neck and head ahead
+  foot.scale.set(1.085, 0.24, 0.05);
+  foot.position.set(-0.155, 0, 0.05); // a tail behind the shell, a neck and head ahead of it
   body.add(foot);
   const head = new THREE.Mesh(geo.sphere, mats.foot);
   head.scale.set(0.16, 0.15, 0.1);
-  head.position.set(1.1, 0, 0.08);
+  head.position.set(0.88, 0, 0.08);
   body.add(head);
   const tentacles = [];
   for (const side of [1, -1]) {
     const mesh = new THREE.Mesh(geo.tentacle, mats.tentacle);
-    mesh.position.set(1.2, 0.07 * side, 0.1);
+    mesh.position.set(0.98, 0.07 * side, 0.1);
     mesh.rotation.z = 0.4 * side;
     body.add(mesh);
     tentacles.push({ mesh, base: 0.4 * side, side });
     const eye = new THREE.Mesh(geo.sphere, mats.eye);
     eye.scale.setScalar(0.035);
-    eye.position.set(1.22, 0.11 * side, 0.14);
+    eye.position.set(1.0, 0.11 * side, 0.14);
     body.add(eye);
   }
-  return { group, body, foot, operculum, mass, tentacles };
+  return { group, body, foot, head, operculum, mass, shell, tentacles };
 }
 
 function createSnails(scene, { count = 2, glassZ = 3.55 } = {}) {
@@ -4292,11 +4293,11 @@ function createSnails(scene, { count = 2, glassZ = 3.55 } = {}) {
       s.body.scale.setScalar(Math.max(e, 0.001));
       s.body.visible = e > 0.02;
       // the soft body under the shell draws up into it too, so a closed snail is shell and plate
-      s.mass.scale.set(0.42 * (0.3 + 0.7 * e), 0.34 * (0.3 + 0.7 * e), 0.24 * (0.3 + 0.7 * e));
+      s.mass.scale.set(0.2 * (0.3 + 0.7 * e), 0.16 * (0.3 + 0.7 * e), 0.12 * (0.3 + 0.7 * e));
       s.operculum.scale.set(0.26 * (1 - e) + 0.0001, 0.2 * (1 - e) + 0.0001, 1);
       s.operculum.visible = e < 0.98;
       const crawling = s.state === 'crawl' ? 1 : 0;
-      s.foot.scale.x = 1.0 * (1 + 0.025 * Math.sin(time * 2.1 + s.phase) * crawling);
+      s.foot.scale.x = 1.085 * (1 + 0.025 * Math.sin(time * 2.1 + s.phase) * crawling);
       for (const t of s.tentacles) {
         t.mesh.rotation.z = t.base + Math.sin(time * 1.6 + s.phase + (t.side > 0 ? 0 : 1.7)) * 0.14;
       }
