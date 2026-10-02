@@ -93,7 +93,11 @@ void main() {
 `;
 
 export function createBubbles(scene, cfg) {
-  const { lite, surfaceY, stone, pump, bedAt, absorb = [0.022, 0.0085, 0.0055] } = cfg;
+  // The surface is movable: it is where the bubbles pop. The water's surface is never drawn, so
+  // on a lens wide enough to see above it the scene raises this to just past the top of the
+  // screen, and the bubbles run off the top of the picture and not out in open water.
+  let surfaceY = cfg.surfaceY;
+  const { lite, stone, pump, bedAt, absorb = [0.022, 0.0085, 0.0055] } = cfg;
   const MAX = lite ? 760 : 1500;
   const RATE_STONE = lite ? 115 : 230;
   const RATE_PUMP = lite ? 34 : 70;
@@ -235,6 +239,8 @@ export function createBubbles(scene, cfg) {
   return {
     update,
     /** Pixels per world unit at distance 1, from the drawing-buffer height and the vertical fov. */
+    setSurface(y) { surfaceY = y; },
+    get surface() { return surfaceY; },
     setViewport(heightPx, fovDeg) {
       material.uniforms.uPxScale.value = heightPx / (2 * Math.tan((fovDeg * Math.PI) / 360));
     },

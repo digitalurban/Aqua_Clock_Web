@@ -3929,7 +3929,11 @@ void main() {
 `;
 
 function createBubbles(scene, cfg) {
-  const { lite, surfaceY, stone, pump, bedAt, absorb = [0.022, 0.0085, 0.0055] } = cfg;
+  // The surface is movable: it is where the bubbles pop. The water's surface is never drawn, so
+  // on a lens wide enough to see above it the scene raises this to just past the top of the
+  // screen, and the bubbles run off the top of the picture and not out in open water.
+  let surfaceY = cfg.surfaceY;
+  const { lite, stone, pump, bedAt, absorb = [0.022, 0.0085, 0.0055] } = cfg;
   const MAX = lite ? 760 : 1500;
   const RATE_STONE = lite ? 115 : 230;
   const RATE_PUMP = lite ? 34 : 70;
@@ -4071,6 +4075,8 @@ function createBubbles(scene, cfg) {
   return {
     update,
     /** Pixels per world unit at distance 1, from the drawing-buffer height and the vertical fov. */
+    setSurface(y) { surfaceY = y; },
+    get surface() { return surfaceY; },
     setViewport(heightPx, fovDeg) {
       material.uniforms.uPxScale.value = heightPx / (2 * Math.tan((fovDeg * Math.PI) / 360));
     },
@@ -5558,6 +5564,14 @@ async function createRiverscape(canvas, options = {}) {
   }
   snails.setArea(snailArea());
 
+  // The world height of the top edge of the screen, on the plane at depth z. Bubbles use it: the
+  // water's surface (y = 10) is never drawn, and on a wide lens the top of the screen is above it.
+  function topOfFrameAt(z) {
+    camera.updateMatrixWorld(true);
+    glassRay.set(0, 1, 0.5).unproject(camera).sub(camera.position);
+    return camera.position.y + ((z - camera.position.z) / glassRay.z) * glassRay.y;
+  }
+
   /* -- the clownfish's patch ------------------------------------------ */
   // They used to keep house in an anemone. Its tentacles rendered as spiky shards, so it
   // went. The pair keep the same patch of tank, in the nook in front of the left-hand
@@ -6276,6 +6290,7 @@ async function createRiverscape(canvas, options = {}) {
     placeStone();
     snails.setArea(snailArea());
     placePump();
+    bubbles.setSurface(Math.max(SURFACE_Y, topOfFrameAt(STONE.z) + 1.2)); // never below the real surface
     bubbles.setViewport(renderer.domElement.height, camera.fov);
     assignments = clockAssignments(new Date(), viewFrame());
   }
@@ -6314,7 +6329,7 @@ async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea } };
+  return { feed, showTime, advance, setClockArea, setFullView, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt } };
 }
 
       const canvas = document.getElementById('scene');
