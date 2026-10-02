@@ -46,13 +46,16 @@ any browser.
 >   upright stone behind the main stone, with two companions), with a stand of stem plants,
 >   rosettes and ferns around them. The planting is re-planned, with the right bed the heavier
 >   and the middle-back thinned to leave open water behind the clock. And the water is a clear
->   aquarium blue: Habitats' light lets green through furthest, ours lets blue.
+>   aquarium blue: Habitats' light lets green through furthest, ours lets blue. The light
+>   moving over the sand is Habitats' own focusing, restored at a softer strength that the
+>   page sets, and its sand is made wider, to suit the wider lens.
 > - **Adapted.** How light passes through a fish's skin: the constants and formula in
 >   `src/scene/riverscape.js` are taken from its `fish-anatomy.js`.
 > - **Ours, inspired by it.** The fish bodies (a neon tetra and a clownfish, built the way
 >   Habitats builds its bloodfin tetra, lofted cross-sections in fractions of body length, but
 >   with our own proportions) and everything above the tank: the clock, the clownfish
->   behaviour, the bubbles, the fog, the air stone, the pump, the snails, the shrimp and the page.
+>   behaviour, the bubbles, the fog, the air stone, the pump, the snails, the shrimp, the water's
+>   surface, the light through the day and the page.
 >
 > What this repo adds is our previous concept of fish telling the time, a pair of clownfish, glassy bubbles, and a hosted web page tuned for phones and tablets. Not affiliated with, or endorsed by, Habitats or Chase Lean.
 
@@ -73,8 +76,8 @@ running all night on a phone is the reason it is not simply *in* the app; see
 - **Show the time** gathers the shoal into the hour straight away (otherwise it does it
   for the first fifteen seconds of every minute).
 - **Feed the fish** drops food. The neons and the clownfish go for it.
-- **Full screen** hides every word and the darkening overlay. Move or tap and three icons
-  (time, feed, exit) appear for three seconds.
+- **Full screen** hides every word and the darkening overlay. Move or tap and four icons
+  (time, feed, light, exit) appear for three seconds.
 
 | | |
 | --- | --- |
@@ -82,6 +85,9 @@ running all night on a phone is the reason it is not simply *in* the app; see
 | `?quality=lite` / `?quality=rich` | force a profile. Touch screens and small machines get `lite` by default |
 | `?fog=grey` | stock grey fog instead of the per-channel water fog, for comparison |
 | `F` / `Esc` | enter / leave full screen |
+| `L`, or the sun icon in full screen | the next look for the light: evening (the default), day, dusk, night, dawn, then the device's clock |
+| `?light=day` (or `dusk`, `night`, `dawn`, `19:30`, `clock`) | open at one look, a time of day, or following the device's clock |
+| `?surface=off` | leave out the rippled underside of the water's surface |
 
 On iPhone, Safari has no Fullscreen API, so the view hides the text but keeps the address
 bar. For none at all: open it with `#full`, then Share, Add to Home Screen.
@@ -117,6 +123,12 @@ bar. For none at all: open it with `#full`, then Share, Add to Home Screen.
   swim up into the water to a new spot, and now and then flick their tails to shoot backward.
 - **Water.** Per-channel fog, so distance turns the tank blue-teal rather than grey;
   and Habitats' own light model for everything under it.
+- **Light and the surface.** On a wide or upright picture, the top of the tank is the underside of
+  the water: a thin, rippled, blue band, drawn as a fake, because a real reflection pass would
+  cost a phone too much. Faint beams of light come down through the water, and soft light moves
+  over the sand and the stones. It opens on a fixed dim blue evening look. The sun button in
+  the full screen view (or `L`) runs the light on through day, dusk, night and dawn, and to the
+  device's own clock.
 - **Two profiles.** `rich` is Riverscape as published. `lite` drops the shadow pass and
   thins the planting, for phones and older tablets. Both are always multisampled: the
   plants use alpha-to-coverage, which without MSAA breaks up into flickering dots.
@@ -135,6 +147,8 @@ Inter font from Google Fonts, so the page needs a network connection.
     src/scene/bubbles.js        the bubble system
     src/scene/snails.js         the snails
     src/scene/shrimp.js         the shrimp
+    src/scene/daylight.js       the light through the day
+    src/scene/surface.js        the water's surface, and the beams of light
     src/scene/riverscape/       Habitats' modules (vendored) + lod.js
     src/scene/textures.js       Poly Haven CC0 maps, inlined
     tools/                      real-browser tests; see tools/README.md

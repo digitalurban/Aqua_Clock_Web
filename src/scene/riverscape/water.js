@@ -5,6 +5,9 @@ import { groundHeight, smoothstep } from "./math.js";
 // that bends plants, carries debris and pushes the fish, and the light refracted
 // by the surface.
 export const waterTime = { value: 0 };
+// PATCH (Aqua Clock): how much of the light's focusing to show, 0 to 1. The page sets it from the time
+// of day. See `focus` in surfaceLightGLSL.
+export const waterCaustic = { value: 0 };
 export const SURFACE_Y = 10;
 export const FLOW_DIRECTION = new THREE.Vector3(1, 0, 0.22).normalize();
 
@@ -104,6 +107,7 @@ export function shelteredVelocity(p, t, out, thickets) {
 // raised by the filter return; the focusing factor is the divergence of the refracted rays
 // at the fragment's depth, with a small refraction angle so the pattern stays soft.
 export const surfaceLightGLSL = /* glsl */ `
+  uniform float uCaustic;
   // Broad, slow changes are smooth enough to evaluate at vertices and interpolate.
   float waterLightDrift(vec3 p, float t) {
     return 1.0
@@ -117,10 +121,11 @@ export const surfaceLightGLSL = /* glsl */ `
       0.0100 * sin(dot(p.xz, vec2(-2.4, 4.2)) - t * 4.1 + 1.3) +
       0.0075 * sin(dot(p.xz, vec2(5.3, -2.6)) - t * 5.2 + 2.9) +
       0.0060 * sin(dot(p.xz, vec2(-4.1, -6.0)) - t * 6.3 + 0.7);
-    // PATCH (Aqua Clock): the focusing term is light that travels across the
-    // scene, which this tank is explicitly not to have. Only the extinction is
-    // kept, so the water keeps its colour and loses its motion.
-    float focus = 1.0;
+    // PATCH (Aqua Clock): the focusing term is scaled by uCaustic, which the page sets from the
+    // time of day. At 0 only the extinction remains: the water keeps its colour and loses its
+    // motion, which is how this port first ran. At 1 it is the full soft moving pattern. It is
+    // clamped, so no patch of the sand goes much darker or brighter than its neighbours.
+    float focus = 1.0 + uCaustic * clamp(depth * laplacian * 1.8, -0.4, 0.7);
     // PATCH (Aqua Clock): bluer water. Habitats' constants (0.020, 0.008, 0.012) let green
     // through furthest, which is why its tank is green. Here blue goes furthest.
     vec3 absorption = exp(-vec3(0.022, 0.0085, 0.0055) * depth);
@@ -134,6 +139,7 @@ export const surfaceLightGLSL = /* glsl */ `
 export function waterLitShader(shader, { perLight = "" } = {}) {
   if (shader.fragmentShader.includes("RE_Direct_Water")) return shader;
   shader.uniforms.waterTime = waterTime;
+  shader.uniforms.uCaustic = waterCaustic;
   // A separate vertex uniform name avoids redeclaring the foliage's current clock.
   shader.uniforms.waterLightTime = waterTime;
   shader.vertexShader = shader.vertexShader

@@ -46,7 +46,7 @@ _bub = re.sub(r'^import .*\n', '', _bub, flags=re.M)
 _bub = _bub.replace('export function createBubbles', 'function createBubbles')
 bundle.append('const createBubbles = (function () {\n' + _bub + '\nreturn createBubbles;\n})();')
 bundle.append('const { createEnvironment, createParticles, createPlants, groundHeight,\n'
-              '        SURFACE_Y, waterLitShader, waterTime, setLOD } = __ns;')
+              '        SURFACE_Y, waterLitShader, waterTime, waterCaustic, setLOD } = __ns;')
 # snails.js has its own top-level names too, and needs waterLitShader, so it goes in an IIFE
 # after the line above
 _sn = open('src/scene/snails.js').read()
@@ -58,8 +58,18 @@ _sh = re.sub(r'^import .*\n', '', _sh, flags=re.M)
 _sh = _sh.replace('export function createShrimp', 'function createShrimp')
 bundle.append('const createShrimp = (function () {\n' + _sh + '\nreturn createShrimp;\n})();')
 
+# daylight.js and surface.js export more than one name between them, so each is wrapped in an
+# IIFE that hands its names back
+def wrap_module(path, names):
+    src = open(path).read()
+    src = re.sub(r'^import .*\n', '', src, flags=re.M)
+    src = re.sub(r'^export\s+', '', src, flags=re.M)
+    return 'const { ' + ', '.join(names) + ' } = (function () {\n' + src + '\nreturn { ' + ', '.join(names) + ' };\n})();'
+bundle.append(wrap_module('src/scene/daylight.js', ['createDaylight']))
+bundle.append(wrap_module('src/scene/surface.js', ['createSurface', 'createShafts']))
+
 scene = open('src/scene/riverscape.js').read()
-scene = re.sub(r"import \{[^}]*\} from '\./(riverscape/[a-z]+|textures|bubbles|snails|shrimp)\.js';\n", '', scene)
+scene = re.sub(r"import \{[^}]*\} from '\./(riverscape/[a-z]+|textures|bubbles|snails|shrimp|daylight|surface)\.js';\n", '', scene)
 scene = scene.replace('export function setFishDetail', 'function setFishDetail')
 scene = scene.replace("import * as THREE from 'three';", '')
 scene = scene.replace('export async function createRiverscape', 'async function createRiverscape')

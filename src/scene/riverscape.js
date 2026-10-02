@@ -19,6 +19,8 @@ import { setLOD } from './riverscape/lod.js';
 import { createBubbles } from './bubbles.js';
 import { createSnails } from './snails.js';
 import { createShrimp } from './shrimp.js';
+import { createDaylight } from './daylight.js';
+import { createSurface, createShafts } from './surface.js';
 
 /* ---------------------------------------------------------------- */
 /* Tunables                                                          */
@@ -1008,7 +1010,8 @@ export async function createRiverscape(canvas, options = {}) {
 
   /* -- light: Riverscape's rig, from its main.js --------------------- */
 
-  scene.add(new THREE.HemisphereLight(0xc2d6e2, 0x30343a, 0.3));
+  const hemi = new THREE.HemisphereLight(0xc2d6e2, 0x30343a, 0.3);
+  scene.add(hemi);
 
   const key = new THREE.DirectionalLight(0xfff8ee, 4.5);
   key.position.set(-3, 11.5, 4.4);
@@ -1229,6 +1232,12 @@ export async function createRiverscape(canvas, options = {}) {
   // Ghost shrimp on the sand in the front of the tank: they walk, pick at the sand, groom their
   // antennae, and now and then flick the tail. They steer round the stones, and the air stone.
   const shrimp = createShrimp(scene, { count: 2, ground: BED, obstacles: [...obstacles, stoneObstacle] });
+
+  // The light of the day (it follows the device's clock, or is set to a look), the surface of the water
+  // seen from below, and the beams that come down through it.
+  const daylight = createDaylight({ scene, renderer, hemi, key, fill, back, backboard, lite });
+  const waterSurface = createSurface(scene, { lite });
+  const shafts = createShafts(scene, { lite });
 
   // The sand the shrimp may walk on: from the back of the front stones to where the bottom of
   // the screen meets the sand. That edge is nearer on a wide lens (full screen) than on the
@@ -1858,6 +1867,10 @@ export async function createRiverscape(canvas, options = {}) {
     bubbles.update(dt, elapsed);
     snails.update(dt, elapsed);
     shrimp.update(dt, elapsed);
+    daylight.update(dt);
+    bubbles.setLight(0.35 + 0.65 * Math.min(1, daylight.state.keyI / 4.5)); // glass shows the light there is
+    waterSurface.update(elapsed, daylight.state);
+    shafts.update(elapsed, daylight.state);
 
     for (let i = pellets.length - 1; i >= 0; i--) {
       const pellet = pellets[i];
@@ -1970,8 +1983,8 @@ export async function createRiverscape(canvas, options = {}) {
     snails.setArea(snailArea());
     placePump();
     shrimp.setArea(shrimpArea());
-    // never below the real surface; the pump's own, worked out at its depth, far back at the glass
-    bubbles.setSurface(Math.max(SURFACE_Y, topOfFrameAt(STONE.z) + 1.2), Math.max(SURFACE_Y, topOfFrameAt(PUMP.z) + 1.2));
+    // the surface is drawn now, so the bubbles pop at it
+    bubbles.setSurface(SURFACE_Y);
     bubbles.setViewport(renderer.domElement.height, camera.fov);
     assignments = clockAssignments(new Date(), viewFrame());
   }
@@ -2010,5 +2023,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea } };
+  return { feed, showTime, advance, setClockArea, setFullView, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }

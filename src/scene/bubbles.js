@@ -59,6 +59,7 @@ varying vec4 vData;
 varying float vDepth;
 varying float vPx;
 uniform vec3 uAbsorb;            // per-channel absorption, the water model's own
+uniform float uLight;            // how much light there is: 1 by day, less at night
 void main() {
   float r = length(vUv);
   if (r > 1.0) discard;
@@ -86,7 +87,7 @@ void main() {
 
   // light reaching the eye has crossed this much water
   vec3 T = exp(-uAbsorb * vDepth);
-  c *= T * 1.08;
+  c *= T * 1.08 * uLight;
   a *= vData.z * mix(0.55, 1.0, T.g);
   gl_FragColor = vec4(c, a);
 }
@@ -127,6 +128,7 @@ export function createBubbles(scene, cfg) {
     uniforms: {
       uPxScale: { value: 1500 },
       uAbsorb: { value: new THREE.Vector3(...absorb) },
+      uLight: { value: 1 },
     },
   });
   const mesh = new THREE.Mesh(geometry, material);
@@ -240,6 +242,7 @@ export function createBubbles(scene, cfg) {
   return {
     update,
     /** Pixels per world unit at distance 1, from the drawing-buffer height and the vertical fov. */
+    setLight(v) { material.uniforms.uLight.value = v; },
     setSurface(y, pumpY = y) { surfaceY = y; pumpSurfaceY = pumpY; },
     get surface() { return surfaceY; },
     get pumpSurface() { return pumpSurfaceY; },

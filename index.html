@@ -256,6 +256,14 @@
       body.full .fullui { display: flex; }
       body.full.awake .fullui { opacity: 1; pointer-events: auto; }
       body.full .page, body.full .scrim { display: none; }
+      /* the name of the light, shown for a moment when it is changed */
+      .lightlabel {
+        position: fixed; left: 50%; z-index: 6; transform: translateX(-50%);
+        top: calc(24px + env(safe-area-inset-top, 0px)); padding: 7px 16px; border-radius: 999px;
+        background: rgba(4, 14, 11, 0.55); backdrop-filter: blur(10px); border: 1px solid rgba(160, 200, 180, 0.18);
+        color: #dcece4; font-size: 13px; letter-spacing: 0.04em; opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+      }
+      .lightlabel.show { opacity: 1; }
       body.full.idle, body.full.idle canvas { cursor: none; }
       @media (max-width: 760px) {
         .links { display: none; }
@@ -280,8 +288,10 @@
     <div class="fullui" id="fullui">
       <button type="button" id="fu-time" aria-label="Show the time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></button>
       <button type="button" id="fu-feed" aria-label="Feed the fish"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="2"/><circle cx="15.5" cy="7.5" r="1.6"/><circle cx="12" cy="14" r="2.2"/><circle cx="17.5" cy="16" r="1.5"/><circle cx="6.5" cy="17" r="1.4"/></svg></button>
+      <button type="button" id="fu-light" aria-label="Change the light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg></button>
       <button type="button" id="fu-exit" aria-label="Exit full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
     </div>
+    <div class="lightlabel" id="lightlabel" role="status" aria-live="polite"></div>
     <div class="boot" id="boot" aria-hidden="true"></div>
 
     <div class="page">
@@ -528,6 +538,9 @@ class GeometryBatch {
 // that bends plants, carries debris and pushes the fish, and the light refracted
 // by the surface.
 const waterTime = { value: 0 };
+// PATCH (Aqua Clock): how much of the light's focusing to show, 0 to 1. The page sets it from the time
+// of day. See `focus` in surfaceLightGLSL.
+const waterCaustic = { value: 0 };
 const SURFACE_Y = 10;
 const FLOW_DIRECTION = new THREE.Vector3(1, 0, 0.22).normalize();
 
@@ -627,6 +640,7 @@ function shelteredVelocity(p, t, out, thickets) {
 // raised by the filter return; the focusing factor is the divergence of the refracted rays
 // at the fragment's depth, with a small refraction angle so the pattern stays soft.
 const surfaceLightGLSL = /* glsl */ `
+  uniform float uCaustic;
   // Broad, slow changes are smooth enough to evaluate at vertices and interpolate.
   float waterLightDrift(vec3 p, float t) {
     return 1.0
@@ -640,10 +654,11 @@ const surfaceLightGLSL = /* glsl */ `
       0.0100 * sin(dot(p.xz, vec2(-2.4, 4.2)) - t * 4.1 + 1.3) +
       0.0075 * sin(dot(p.xz, vec2(5.3, -2.6)) - t * 5.2 + 2.9) +
       0.0060 * sin(dot(p.xz, vec2(-4.1, -6.0)) - t * 6.3 + 0.7);
-    // PATCH (Aqua Clock): the focusing term is light that travels across the
-    // scene, which this tank is explicitly not to have. Only the extinction is
-    // kept, so the water keeps its colour and loses its motion.
-    float focus = 1.0;
+    // PATCH (Aqua Clock): the focusing term is scaled by uCaustic, which the page sets from the
+    // time of day. At 0 only the extinction remains: the water keeps its colour and loses its
+    // motion, which is how this port first ran. At 1 it is the full soft moving pattern. It is
+    // clamped, so no patch of the sand goes much darker or brighter than its neighbours.
+    float focus = 1.0 + uCaustic * clamp(depth * laplacian * 1.8, -0.4, 0.7);
     // PATCH (Aqua Clock): bluer water. Habitats' constants (0.020, 0.008, 0.012) let green
     // through furthest, which is why its tank is green. Here blue goes furthest.
     vec3 absorption = exp(-vec3(0.022, 0.0085, 0.0055) * depth);
@@ -657,6 +672,7 @@ const surfaceLightGLSL = /* glsl */ `
 function waterLitShader(shader, { perLight = "" } = {}) {
   if (shader.fragmentShader.includes("RE_Direct_Water")) return shader;
   shader.uniforms.waterTime = waterTime;
+  shader.uniforms.uCaustic = waterCaustic;
   // A separate vertex uniform name avoids redeclaring the foliage's current clock.
   shader.uniforms.waterLightTime = waterTime;
   shader.vertexShader = shader.vertexShader
@@ -718,7 +734,7 @@ function waterLitShader(shader, { perLight = "" } = {}) {
   return shader;
 }
 
-  Object.assign(__ns, { waterTime, SURFACE_Y, FLOW_DIRECTION, CURRENT_SPEED, currentGLSL, currentVelocity, flowDirectionAt, thicketAt, shelteredVelocity, surfaceLightGLSL, waterLitShader });
+  Object.assign(__ns, { waterTime, waterCaustic, SURFACE_Y, FLOW_DIRECTION, CURRENT_SPEED, currentGLSL, currentVelocity, flowDirectionAt, thicketAt, shelteredVelocity, surfaceLightGLSL, waterLitShader });
 })(__ns);
 
 /* ---- riverscape/foliage.js ---- */
@@ -3897,6 +3913,7 @@ varying vec4 vData;
 varying float vDepth;
 varying float vPx;
 uniform vec3 uAbsorb;            // per-channel absorption, the water model's own
+uniform float uLight;            // how much light there is: 1 by day, less at night
 void main() {
   float r = length(vUv);
   if (r > 1.0) discard;
@@ -3924,7 +3941,7 @@ void main() {
 
   // light reaching the eye has crossed this much water
   vec3 T = exp(-uAbsorb * vDepth);
-  c *= T * 1.08;
+  c *= T * 1.08 * uLight;
   a *= vData.z * mix(0.55, 1.0, T.g);
   gl_FragColor = vec4(c, a);
 }
@@ -3965,6 +3982,7 @@ function createBubbles(scene, cfg) {
     uniforms: {
       uPxScale: { value: 1500 },
       uAbsorb: { value: new THREE.Vector3(...absorb) },
+      uLight: { value: 1 },
     },
   });
   const mesh = new THREE.Mesh(geometry, material);
@@ -4078,6 +4096,7 @@ function createBubbles(scene, cfg) {
   return {
     update,
     /** Pixels per world unit at distance 1, from the drawing-buffer height and the vertical fov. */
+    setLight(v) { material.uniforms.uLight.value = v; },
     setSurface(y, pumpY = y) { surfaceY = y; pumpSurfaceY = pumpY; },
     get surface() { return surfaceY; },
     get pumpSurface() { return pumpSurfaceY; },
@@ -4091,7 +4110,7 @@ function createBubbles(scene, cfg) {
 return createBubbles;
 })();
 const { createEnvironment, createParticles, createPlants, groundHeight,
-        SURFACE_Y, waterLitShader, waterTime, setLOD } = __ns;
+        SURFACE_Y, waterLitShader, waterTime, waterCaustic, setLOD } = __ns;
 const createSnails = (function () {
 
 /*
@@ -4867,6 +4886,307 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
 }
 
 return createShrimp;
+})();
+const { createDaylight } = (function () {
+
+/*
+ * The light of the tank through the day.
+ *
+ * A set of "looks" is defined at certain hours: night, first light, dawn, morning, noon,
+ * afternoon, golden hour, dusk, early night. Between them everything is blended: the colour
+ * and strength of the four lights, the hemisphere light above and below, the fog colour and
+ * density, the back panel, the exposure, the environment light, and three numbers the water
+ * effects read (how strong the moving light on the sand is, how strong the beams from the
+ * surface are, and how bright the surface itself looks). The key light also moves across the
+ * sky from one side of the tank to the other, and at night becomes a dim moon.
+ *
+ * By default it is Evening, a fixed look at about half past eight: dim and blue, the plants and
+ * the sand still clear. Nothing follows the clock unless asked to. The sun button (or L) runs the
+ * light on to the next look, evening, day, dusk, night, dawn and then the device's own clock; it
+ * visibly runs on to that hour in a second or two, and the next press goes on. `?light=day`,
+ * `?light=night`, `?light=19:30` or `?light=clock` opens at a chosen look, time, or following the
+ * clock. Day is exactly the look the tank had before this existed.
+ *
+ * Noon is exactly the look the tank had before this existed.
+ */
+
+const L = (h, keyC, keyI, hemiSky, hemiGround, hemiI, fillC, fillI, backC, backI, fog, density, board, exposure, env, caustic, shafts, surface) =>
+  ({ h, keyC, keyI, hemiSky, hemiGround, hemiI, fillC, fillI, backC, backI, fog, density, board, exposure, env, caustic, shafts, surface });
+
+const LOOKS = [
+  //  hour  key colour, strength | hemisphere sky, ground, strength | fill | back | fog, density | back panel | exposure, env | caustic, shafts, surface
+  L(0.0,  '#92b0e2', 1.9, '#4a6fa6', '#14202e', 0.72, '#88a2d0', 0.62, '#88aada', 0.74, '#143a58', 0.0255, '#1a4a72', 1.3, 0.55, 0.26, 0.20, 0.42),
+  L(5.5,  '#96b3e4', 2.1, '#4f74aa', '#16222f', 0.72, '#8da6d4', 0.62, '#8eaede', 0.74, '#163d5c', 0.0255, '#1b4d76', 1.3, 0.57, 0.28, 0.24, 0.45),
+  L(6.6,  '#ffc09a', 2.3, '#e2bba6', '#3a2f36', 0.32, '#eecdbd', 0.42, '#ffd8bf', 0.62, '#2b5068', 0.025, '#3a6684', 1.17, 0.60, 0.50, 0.75, 0.70),
+  L(8.5,  '#fff0dc', 3.9, '#c2d6e2', '#30343a', 0.30, '#c2d8e4', 0.44, '#d2ecf2', 0.80, '#1f5878', 0.024, '#2a6688', 1.17, 0.90, 0.90, 0.90, 0.95),
+  L(12.5, '#fff8ee', 4.5, '#c2d6e2', '#30343a', 0.30, '#c2d8e4', 0.44, '#d2ecf2', 0.80, '#1f5878', 0.024, '#2a6688', 1.17, 1.00, 1.00, 1.00, 1.00),
+  L(16.5, '#fff2de', 4.1, '#c2d6e2', '#30343a', 0.30, '#c2d8e4', 0.44, '#d2ecf2', 0.80, '#1f5878', 0.024, '#2a6688', 1.17, 0.95, 0.90, 0.95, 0.97),
+  L(18.5, '#ffc48a', 3.2, '#e4c6a8', '#34322f', 0.30, '#e8c8a8', 0.40, '#ffd2a8', 0.65, '#27506a', 0.0245, '#34628a', 1.17, 0.70, 0.65, 0.85, 0.80),
+  L(19.7, '#ffb094', 2.3, '#d0a8bc', '#2a2c3c', 0.42, '#d8b4c4', 0.48, '#f4c4bc', 0.64, '#25506f', 0.0252, '#33608a', 1.24, 0.58, 0.34, 0.55, 0.62),
+  L(21.0, '#a4bfec', 2.1, '#5074a8', '#16202e', 0.72, '#8fa8d4', 0.62, '#90b0de', 0.74, '#163c5a', 0.0255, '#1b4d76', 1.3, 0.57, 0.28, 0.26, 0.45),
+  L(24.0, '#92b0e2', 1.9, '#4a6fa6', '#14202e', 0.72, '#88a2d0', 0.62, '#88aada', 0.74, '#143a58', 0.0255, '#1a4a72', 1.3, 0.55, 0.26, 0.20, 0.42),
+];
+const COLOURS = ['keyC', 'hemiSky', 'hemiGround', 'fillC', 'backC', 'fog', 'board'];
+const NUMBERS = ['keyI', 'hemiI', 'fillI', 'backI', 'density', 'exposure', 'env', 'caustic', 'shafts', 'surface'];
+for (const look of LOOKS) for (const k of COLOURS) look[k] = new THREE.Color(look[k]);
+
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const ORDER = ['evening', 'day', 'dusk', 'night', 'dawn', 'auto'];
+const PRESET_HOUR = { evening: 20.5, dawn: 6.6, day: 12.5, dusk: 19.4, night: 0.8 };
+const SWEEP = 8; // hours per second, when it runs on to a chosen hour
+
+const localHour = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; };
+const clockText = (h) => { const m = Math.round(h * 60) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+
+function createDaylight({ scene, renderer, hemi, key, fill, back, backboard, lite = false }) {
+  const state = { hour: 12.5, keyPos: new THREE.Vector3() };
+  for (const k of COLOURS) state[k] = new THREE.Color();
+  for (const k of NUMBERS) state[k] = 0;
+
+  let mode = 'evening', fixedHour = 12;   // the default is a fixed look: it follows the clock only when asked to
+  let hour = PRESET_HOUR.evening, applied = -99;
+
+  function blend(h) {
+    let i = 0;
+    while (i < LOOKS.length - 2 && h >= LOOKS[i + 1].h) i++;
+    const a = LOOKS[i], b = LOOKS[i + 1], t = smooth(0, 1, (h - a.h) / (b.h - a.h));
+    for (const k of COLOURS) state[k].lerpColors(a[k], b[k], t);
+    for (const k of NUMBERS) state[k] = a[k] + (b[k] - a[k]) * t;
+    // the key light crosses the sky from one side to the other by day, and is a dim moon by night
+    const sunW = smooth(5.6, 7.0, h) * (1 - smooth(18.2, 19.8, h));
+    const angle = Math.min(1, Math.max(0, (h - 6) / 12)) * Math.PI;
+    state.keyPos.set(
+      3 + (-3 - 8 * Math.cos(angle) - 3) * sunW,
+      10 + (5 + 6.5 * Math.sin(angle) - 10) * sunW,
+      4.4,
+    );
+    state.hour = h;
+  }
+  function apply() {
+    const s = state;
+    key.color.copy(s.keyC); key.intensity = s.keyI; key.position.copy(s.keyPos);
+    hemi.color.copy(s.hemiSky); hemi.groundColor.copy(s.hemiGround); hemi.intensity = s.hemiI;
+    fill.color.copy(s.fillC); fill.intensity = s.fillI;
+    back.color.copy(s.backC); back.intensity = s.backI;
+    scene.fog.color.copy(s.fog); scene.fog.density = s.density;
+    if (scene.background && scene.background.isColor) scene.background.copy(s.fog).multiplyScalar(0.45);
+    backboard.material.color.copy(s.board);
+    renderer.toneMappingExposure = s.exposure;
+    if ('environmentIntensity' in scene) scene.environmentIntensity = s.env;
+    waterCaustic.value = s.caustic * (lite ? 0.8 : 1);
+  }
+  const targetHour = () => (mode === 'auto' ? localHour() : mode === 'time' ? fixedHour : PRESET_HOUR[mode]);
+
+  function setMode(m) {
+    if (typeof m !== 'string') return false;
+    let v = m.trim().toLowerCase();
+    if (v === 'clock') v = 'auto';
+    if (ORDER.includes(v)) { mode = v; return true; }
+    const t = /^(\d{1,2})[:.](\d{2})$/.exec(v);
+    if (t && +t[1] < 24 && +t[2] < 60) { mode = 'time'; fixedHour = +t[1] + +t[2] / 60; return true; }
+    return false;
+  }
+  function label() {
+    if (mode === 'auto') return 'Clock · ' + clockText(localHour());
+    if (mode === 'time') return clockText(fixedHour);
+    return mode[0].toUpperCase() + mode.slice(1);
+  }
+  function cycle() {
+    const i = ORDER.indexOf(mode);
+    mode = ORDER[(i + 1) % ORDER.length];   // from a fixed time, 'time' is -1, so it goes on to 'auto'
+    return label();
+  }
+  function update(dt) {
+    const target = targetHour();
+    const ahead = (target - hour + 24) % 24;
+    if (ahead > 1e-5) {
+      // following the clock is instant; running on to a chosen hour is a quick sweep forward
+      const step = mode === 'auto' && ahead < 0.25 ? ahead : Math.min(ahead, SWEEP * dt);
+      hour = (hour + step) % 24;
+    }
+    if (Math.abs(hour - applied) > 0.002 || applied < -90) { blend(hour); apply(); applied = hour; }
+  }
+  update(0);
+
+  return {
+    update, setMode, cycle,
+    get label() { return label(); },
+    get mode() { return mode; },
+    get hour() { return hour; },
+    get state() { return state; },
+  };
+}
+
+return { createDaylight };
+})();
+const { createSurface, createShafts } = (function () {
+
+/*
+ * What there is to see at the top of the water, and what comes down through it.
+ *
+ * The surface. Seen from below at a shallow angle, the surface of water is a mirror: it
+ * reflects the tank back at you. The tank's lens, wide in full screen and on a phone, sees
+ * a band of it at the top of the picture, so it is drawn: a rippled sheet that is brightest
+ * toward the top of the screen, fading into the fog where it meets the back panel, with thin
+ * bright lines where a ripple faces you and dark green wisps low in the band, which is the
+ * grass tops reflected in it. It is a fake: no second render of the tank, which a phone
+ * could not afford.
+ *
+ * The beams. Soft shafts of light from the surface, slanting the way the key light does, a
+ * few of them, drifting a little, fading as they go down. They are additive and sit behind
+ * the fish and the nearer plants.
+ */
+
+const rand = (a, b) => a + Math.random() * (b - a);
+
+const SURFACE_VERT = /* glsl */ `
+  varying vec3 vW;
+  #include <fog_pars_vertex>
+  void main() {
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vW = world.xyz;
+    vec4 mvPosition = viewMatrix * world;
+    gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
+  }`;
+
+const SURFACE_FRAG = /* glsl */ `
+  uniform float uTime;
+  uniform float uBright;
+  uniform float uLite;
+  uniform vec3 uTint;
+  uniform vec3 uDeep;
+  uniform vec3 uSheen;
+  varying vec3 vW;
+  #include <common>
+  #include <fog_pars_fragment>
+
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+  }
+  // The surface height: layers of noise drifting at different speeds, so the ripples are irregular.
+  float height(vec2 p, float t) {
+    float h = vnoise(p + vec2(t * 0.04, t * 0.02)) * 0.6;
+    h += vnoise(p * 2.3 - vec2(t * 0.06, -t * 0.03) + 7.3) * 0.4;
+    return h;
+  }
+  void main() {
+    vec3 rd = normalize(vW - cameraPosition);
+    // Ripples seen from below at a shallow angle are long and low, so the pattern is sampled
+    // much wider across than along.
+    vec2 p = vec2(vW.x * 1.1, vW.z * 0.36);
+    float h = height(p, uTime);
+    // how far up the picture: 0 at the far edge, where the surface meets the back panel, 1 at the top
+    float up = smoothstep(0.19, 0.34, clamp(rd.y, 0.0, 1.0));
+    // a calm, bright, bluish sheet that is brighter toward the top. It is never made darker than
+    // this: no dark patches, which read as dirt and not as water
+    vec3 col = mix(uDeep, uTint, 0.35 + 0.5 * up);
+    // thin bright lines along the contours of the ripples, where they catch the light
+    float f = fract(h * 6.0 + uTime * 0.03);
+    float line = smoothstep(0.055, 0.0, min(f, 1.0 - f));
+    col += uSheen * line * (0.07 + 0.15 * up);
+    col *= mix(0.3, 1.0, uBright);
+    // it is only a thin shimmering band at the top: it fades out well before it reaches the tank
+    float alpha = smoothstep(0.22, 0.31, rd.y);
+    gl_FragColor = vec4(col, alpha);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+  }`;
+
+function createSurface(scene, { lite = false } = {}) {
+  const geometry = new THREE.PlaneGeometry(70, 30);
+  geometry.rotateX(Math.PI / 2); // lies flat, facing down into the water
+  const uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
+    uTime: { value: 0 }, uBright: { value: 1 }, uLite: { value: lite ? 1 : 0 },
+    uTint: { value: new THREE.Color('#9fc8dc') }, uDeep: { value: new THREE.Color('#2a6688') },
+    uSheen: { value: new THREE.Color('#ffffff') }, uPlant: { value: new THREE.Color('#2f6b3a') },
+  }]);
+  const material = new THREE.ShaderMaterial({ uniforms, fog: true, vertexShader: SURFACE_VERT, fragmentShader: SURFACE_FRAG, transparent: true, depthWrite: false });
+  const mesh = new THREE.Mesh(geometry, material);
+  // from the back panel to just short of the camera, so the band reaches the top of any picture
+  mesh.position.set(0, SURFACE_Y, 6);
+  scene.add(mesh);
+  const tint = new THREE.Color(), cyan = new THREE.Color('#8fd0ee');
+  return {
+    mesh,
+    update(time, s) {
+      uniforms.uTime.value = time;
+      uniforms.uBright.value = s.surface;
+      uniforms.uDeep.value.copy(s.board);
+      tint.copy(s.fog).lerp(cyan, 0.55);        // the fog's colour, pushed toward a bright blue
+      uniforms.uTint.value.copy(tint);
+      uniforms.uSheen.value.copy(s.keyC);
+    },
+    dispose() { geometry.dispose(); material.dispose(); scene.remove(mesh); },
+  };
+}
+
+const BEAM_VERT = /* glsl */ `
+  varying vec2 vUv;
+  void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+
+const BEAM_FRAG = /* glsl */ `
+  uniform float uTime;
+  uniform float uStrength;
+  uniform float uSeed;
+  uniform vec3 uColor;
+  varying vec2 vUv;
+  void main() {
+    float across = clamp(1.0 - abs(vUv.x - 0.5) * 2.0, 0.0, 1.0);
+    float profile = pow(across, 2.2);
+    float down = pow(vUv.y, 1.3);                     // uv.y is 1 at the surface, 0 at the far end
+    float shimmer = 0.78 + 0.22 * sin(vUv.y * 11.0 - uTime * 0.5 + uSeed) * sin(uTime * 0.23 + uSeed * 2.0);
+    float a = profile * down * shimmer * uStrength;
+    gl_FragColor = vec4(uColor, a);
+    #include <colorspace_fragment>
+  }`;
+
+function createShafts(scene, { lite = false } = {}) {
+  const count = lite ? 4 : 7;
+  const geometry = new THREE.PlaneGeometry(1, 1);
+  geometry.translate(0, -0.5, 0); // hangs down from its top edge, which is at the surface
+  const group = new THREE.Group();
+  group.position.y = SURFACE_Y;
+  scene.add(group);
+  const beams = [];
+  for (let i = 0; i < count; i++) {
+    const material = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uStrength: { value: 0 }, uSeed: { value: rand(0, 100) }, uColor: { value: new THREE.Color() } },
+      vertexShader: BEAM_VERT, fragmentShader: BEAM_FRAG,
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.scale.set(rand(1.1, 2.6), rand(8.4, 9.6), 1);
+    const pivot = new THREE.Group();
+    pivot.add(mesh);
+    group.add(pivot);
+    beams.push({ pivot, material, x0: rand(-9, 9), z0: rand(-5, 0.5), drift: rand(0.2, 0.5), phase: rand(0, 6.28), speed: rand(0.04, 0.09), base: rand(0.6, 1) });
+  }
+  const colour = new THREE.Color(), pale = new THREE.Color('#cfe9f2');
+  return {
+    beams,
+    update(time, s) {
+      // the beams slant the way the key light travels: down and away from it
+      const tilt = Math.atan2(-s.keyPos.x, s.keyPos.y - 1);
+      colour.copy(pale).lerp(s.keyC, 0.5);
+      for (const b of beams) {
+        b.pivot.position.set(b.x0 + Math.sin(time * b.speed + b.phase) * b.drift, 0, b.z0);
+        b.pivot.rotation.z = tilt + 0.02 * Math.sin(time * 0.07 + b.phase);
+        const u = b.material.uniforms;
+        u.uTime.value = time;
+        u.uStrength.value = s.shafts * b.base * 0.16;
+        u.uColor.value.copy(colour);
+      }
+    },
+    dispose() { for (const b of beams) b.material.dispose(); geometry.dispose(); scene.remove(group); },
+  };
+}
+
+return { createSurface, createShafts };
 })();
 /**
  * Aqua Clock V2 — live aquascape
@@ -5870,7 +6190,8 @@ async function createRiverscape(canvas, options = {}) {
 
   /* -- light: Riverscape's rig, from its main.js --------------------- */
 
-  scene.add(new THREE.HemisphereLight(0xc2d6e2, 0x30343a, 0.3));
+  const hemi = new THREE.HemisphereLight(0xc2d6e2, 0x30343a, 0.3);
+  scene.add(hemi);
 
   const key = new THREE.DirectionalLight(0xfff8ee, 4.5);
   key.position.set(-3, 11.5, 4.4);
@@ -6091,6 +6412,12 @@ async function createRiverscape(canvas, options = {}) {
   // Ghost shrimp on the sand in the front of the tank: they walk, pick at the sand, groom their
   // antennae, and now and then flick the tail. They steer round the stones, and the air stone.
   const shrimp = createShrimp(scene, { count: 2, ground: BED, obstacles: [...obstacles, stoneObstacle] });
+
+  // The light of the day (it follows the device's clock, or is set to a look), the surface of the water
+  // seen from below, and the beams that come down through it.
+  const daylight = createDaylight({ scene, renderer, hemi, key, fill, back, backboard, lite });
+  const waterSurface = createSurface(scene, { lite });
+  const shafts = createShafts(scene, { lite });
 
   // The sand the shrimp may walk on: from the back of the front stones to where the bottom of
   // the screen meets the sand. That edge is nearer on a wide lens (full screen) than on the
@@ -6720,6 +7047,10 @@ async function createRiverscape(canvas, options = {}) {
     bubbles.update(dt, elapsed);
     snails.update(dt, elapsed);
     shrimp.update(dt, elapsed);
+    daylight.update(dt);
+    bubbles.setLight(0.35 + 0.65 * Math.min(1, daylight.state.keyI / 4.5)); // glass shows the light there is
+    waterSurface.update(elapsed, daylight.state);
+    shafts.update(elapsed, daylight.state);
 
     for (let i = pellets.length - 1; i >= 0; i--) {
       const pellet = pellets[i];
@@ -6832,8 +7163,8 @@ async function createRiverscape(canvas, options = {}) {
     snails.setArea(snailArea());
     placePump();
     shrimp.setArea(shrimpArea());
-    // never below the real surface; the pump's own, worked out at its depth, far back at the glass
-    bubbles.setSurface(Math.max(SURFACE_Y, topOfFrameAt(STONE.z) + 1.2), Math.max(SURFACE_Y, topOfFrameAt(PUMP.z) + 1.2));
+    // the surface is drawn now, so the bubbles pop at it
+    bubbles.setSurface(SURFACE_Y);
     bubbles.setViewport(renderer.domElement.height, camera.fov);
     assignments = clockAssignments(new Date(), viewFrame());
   }
@@ -6872,7 +7203,7 @@ async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea } };
+  return { feed, showTime, advance, setClockArea, setFullView, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }
 
       const canvas = document.getElementById('scene');
@@ -6890,6 +7221,13 @@ async function createRiverscape(canvas, options = {}) {
         console.error(error);
         boot.setAttribute('data-ready', 'true');
       }
+      // The light: the sun button in the full screen controls, and L, run it on to the next look
+      // (clock, dawn, day, dusk, night). ?light=dusk or ?light=19:30 opens at one.
+      const lightLabel = document.getElementById('lightlabel'); let lightTimer = 0;
+      const showLight = (text) => { lightLabel.textContent = text; lightLabel.classList.add('show'); clearTimeout(lightTimer); lightTimer = setTimeout(() => lightLabel.classList.remove('show'), 2000); };
+      document.getElementById('fu-light').addEventListener('click', () => showLight(habitat.cycleLight()));
+      window.addEventListener('keydown', (e) => { if ((e.key === 'l' || e.key === 'L') && !e.metaKey && !e.ctrlKey && !e.altKey) showLight(habitat.cycleLight()); });
+      { const q = new URLSearchParams(location.search); const want = q.get('light') || q.get('time'); if (want) habitat.setLight(want); if (q.get('surface') === 'off') habitat.setSurfaceVisible(false); }
       document.getElementById('feed').addEventListener('click', () => habitat && habitat.feed());
       document.getElementById('showtime').addEventListener('click', () => habitat && habitat.showTime());
       // Keep the clock out from behind the words: measure how much room the text leaves above

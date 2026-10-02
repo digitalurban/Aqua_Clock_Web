@@ -13,9 +13,10 @@ planting, foliage and water lighting.
 1. **Textures** (`environment.js`): the Poly Haven maps are loaded from inlined data URIs
    rather than a relative `assets/` path, because the page is a single self-contained file.
 2. **Surface focusing** (`water.js`): the focusing term, which is light refracted through a
-   rippled surface, is forced to 1. It is physically right and it is also light that travels
-   across the scene, which this tank is not to have. The wavelength-dependent extinction is
-   untouched, so the water keeps its colour and loses its motion.
+   rippled surface, is scaled by a new uniform, `uCaustic`, that the page sets from the time of
+   day, and clamped. At 0 the term is 1, which is how this port first ran (the water keeps its
+   colour and loses its motion); at 1 it is Habitats' own soft moving pattern, strongest by day.
+   The wavelength-dependent extinction is untouched.
 3. **Level of detail** (`environment.js`, `plants.js`, `broadleaf.js`, `stemplants.js`, plus
    the new `lod.js`): counts and tessellation that Habitats hard-codes are read through a
    dial, so a phone can run a lighter scene. With the `rich` profile the dial is 1 and
