@@ -149,7 +149,7 @@
       .sub {
         font-size: clamp(1rem, 1.4vw, 1.12rem);
         line-height: 1.65;
-        color: var(--muted);
+        color: rgba(226, 240, 232, 0.82); /* brighter than --muted, which was too dim over the planting */
         margin: 0 0 34px;
         max-width: 46ch;
       }
@@ -178,11 +178,11 @@
         align-items: flex-end;
         padding: 0 0 26px;
         font-size: 11.5px;
-        color: var(--faint);
+        color: rgba(226, 240, 232, 0.6); /* brighter than --faint, which was too dim over the planting */
         letter-spacing: 0.02em;
       }
       .status { display: flex; gap: 22px; }
-      .status b { font-weight: 400; color: rgba(226, 240, 232, 0.62); }
+      .status b { font-weight: 400; color: rgba(226, 240, 232, 0.82); }
 
       /* iOS Safari: 100% can be taller than what is actually visible */
       @supports (height: 100dvh) { .page { height: 100dvh; } }
@@ -206,6 +206,15 @@
       @media (max-aspect-ratio: 1/1) and (max-width: 600px) {
         .sub, .eyebrow, .stat { display: none; }
         main { padding-bottom: 8px; }
+      }
+      /* a soft dark halo behind the words, so they stay legible over the busy planting. Not on
+         the buttons: dark text on a white pill would only blur. */
+      .page h1, .page .brand {
+        text-shadow: 0 1px 3px rgba(3, 12, 18, 0.7), 0 0 26px rgba(3, 12, 18, 0.6);
+      }
+      /* small, light text needs a denser halo than the headline does */
+      .page .sub, .page footer {
+        text-shadow: 0 0 2px rgba(3, 12, 18, 0.95), 0 0 9px rgba(3, 12, 18, 0.9), 0 0 22px rgba(3, 12, 18, 0.65);
       }
       /* a quiet link to the source, in the footer */
       /* padding with an equal negative margin: a thumb-sized target that does not move the layout */
@@ -280,7 +289,7 @@
 
       <footer>
         <div class="status">
-          <span class="stat"><b id="fishcount">84</b> neons, 2 clowns</span>
+          <span class="stat"><b id="fishcount">84</b> neons, <b>2</b> clowns</span>
           <span class="stat">seven-segment digits</span>
           <span>render <b id="state">…</b></span>
           <span class="stat">forms <b>on the minute</b></span>
@@ -5045,7 +5054,7 @@ async function createRiverscape(canvas, options = {}) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#0a2a42');
-  scene.fog = new THREE.FogExp2('#1f5878', 0.034);
+  scene.fog = new THREE.FogExp2('#1f5878', 0.024);
 
   const camera = new THREE.PerspectiveCamera(25.8, 16 / 9, 0.2, 70);
   camera.position.set(0, 4.65, 20.5);
@@ -5102,7 +5111,9 @@ async function createRiverscape(canvas, options = {}) {
     new THREE.MeshStandardMaterial({ color: 0x2a6688, roughness: 1 }),
   );
   backboard.position.set(0, 7, -7.2);
-  backboard.receiveShadow = true;
+  // No shadows on the back panel: the planting's shadows fell on it as long dark smudges,
+  // which read as dirt on the glass rather than depth. They still fall on the sand and stones.
+  backboard.receiveShadow = false;
   scene.add(backboard);
 
   /* -- the tank ------------------------------------------------------ */

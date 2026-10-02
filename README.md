@@ -12,12 +12,12 @@ to tell the time.
 ## The story
 
 **Aqua Clock** launched on the [App Store](https://apps.apple.com/gb/app/aqua-clock/id6760460959) in March 2026: a tank where the fish tell
-the time. It was built to be light weight and battery friendly - see the post written up at Digital Urban
+the time. It was built to be lightweight and battery friendly - see the post written up at Digital Urban
 [*Multi-Model Vibe Coding, Boids, and the Fish That Tell the Time*](https://connected-environments.org/blog/2026-03-20-aqua-clock-vibe-coding-boids-fish-tell-time/).
 
 Six months on, we came across [**Desktop Habitats**](https://github.com/chaseleantj/desktop-habitats), Chase Lean's amazing open-source
 (MIT) live aquarium wallpaper for macOS, whose tank is photoreal: a very different world from
-the Aqua Clocks flat 2D scene. As such the draw to update our time telling aquairum was strong and we pointed Claudes latest model at the Habitats repositor. It read the Habitats code, brought
+Aqua Clock's flat 2D scene. As such the draw to update our time-telling aquarium was strong and we pointed Claude's latest model at the Habitats repository. It read the Habitats code, brought
 the tank in (with credit, see below), and built the clock, the clownfish, the bubbles and
 their behaviour on top. This repo is the result: a new, web-based Aqua Clock that runs in
 any browser.
@@ -54,7 +54,7 @@ any browser.
 >   with our own proportions) and everything above the tank: the clock, the clownfish
 >   behaviour, the bubbles, the fog, the air stone, the pump and the page.
 >
-> What this repo adds is a our previous concept of Fish Telling the time, a pair of clownfish, glassy bubbles, and a hosted web page tuned for phones and tablets.
+> What this repo adds is our previous concept of fish telling the time, a pair of clownfish, glassy bubbles, and a hosted web page tuned for phones and tablets. Not affiliated with, or endorsed by, Habitats or Chase Lean.
 
 ## The app
 

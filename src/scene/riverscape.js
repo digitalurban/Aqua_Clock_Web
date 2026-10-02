@@ -998,7 +998,7 @@ export async function createRiverscape(canvas, options = {}) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#0a2a42');
-  scene.fog = new THREE.FogExp2('#1f5878', 0.034);
+  scene.fog = new THREE.FogExp2('#1f5878', 0.024);
 
   const camera = new THREE.PerspectiveCamera(25.8, 16 / 9, 0.2, 70);
   camera.position.set(0, 4.65, 20.5);
@@ -1055,7 +1055,9 @@ export async function createRiverscape(canvas, options = {}) {
     new THREE.MeshStandardMaterial({ color: 0x2a6688, roughness: 1 }),
   );
   backboard.position.set(0, 7, -7.2);
-  backboard.receiveShadow = true;
+  // No shadows on the back panel: the planting's shadows fell on it as long dark smudges,
+  // which read as dirt on the glass rather than depth. They still fall on the sand and stones.
+  backboard.receiveShadow = false;
   scene.add(backboard);
 
   /* -- the tank ------------------------------------------------------ */
