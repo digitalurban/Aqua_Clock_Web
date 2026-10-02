@@ -18,6 +18,7 @@ import { SURFACE_Y, waterLitShader, waterTime } from './riverscape/water.js';
 import { setLOD } from './riverscape/lod.js';
 import { createBubbles } from './bubbles.js';
 import { createSnails } from './snails.js';
+import { createShrimp } from './shrimp.js';
 
 /* ---------------------------------------------------------------- */
 /* Tunables                                                          */
@@ -1158,6 +1159,7 @@ export async function createRiverscape(canvas, options = {}) {
   // the frame is only so wide at the stone's depth, so it is placed from the
   // viewport and moved whenever the screen changes shape.
   const STONE = { x: 6.5, z: 2.0, yaw: 0.28, length: 1.1, radius: 0.23, y: 0 };
+  const stoneObstacle = { center: new THREE.Vector3(), radius: 0.7 }; // the air stone, for the shrimp to walk round
   const stoneMaterial = new THREE.MeshStandardMaterial({ color: '#b4bbb3', roughness: 0.96, metalness: 0 });
   stoneMaterial.onBeforeCompile = (shader) => waterLitShader(shader);
   stoneMaterial.customProgramCacheKey = () => 'airstone';
@@ -1195,6 +1197,7 @@ export async function createRiverscape(canvas, options = {}) {
     const ax = Math.cos(STONE.yaw) * STONE.length * 0.5, az = -Math.sin(STONE.yaw) * STONE.length * 0.5;
     STONE.y = Math.min(BED(STONE.x, STONE.z), BED(STONE.x + ax, STONE.z + az), BED(STONE.x - ax, STONE.z - az)) - 0.09;
     stoneMesh.position.set(STONE.x, STONE.y, STONE.z);
+    stoneObstacle.center.set(STONE.x, STONE.y, STONE.z); // the shrimp walk round it
   }
   placeStone();
   const bubbles = createBubbles(scene, {
@@ -1222,6 +1225,22 @@ export async function createRiverscape(canvas, options = {}) {
     return { minX: Math.min(x0, x1), maxX: Math.max(x0, x1), minY: Math.min(y0, y1), maxY: Math.max(y0, y1) };
   }
   snails.setArea(snailArea());
+
+  // Ghost shrimp on the sand in the front of the tank: they walk, pick at the sand, groom their
+  // antennae, and now and then flick the tail. They steer round the stones, and the air stone.
+  const shrimp = createShrimp(scene, { count: 2, ground: BED, obstacles: [...obstacles, stoneObstacle] });
+
+  // The sand the shrimp may walk on: from the back of the front stones to where the bottom of
+  // the screen meets the sand. That edge is nearer on a wide lens (full screen) than on the
+  // normal one, so it is worked out from the camera.
+  function shrimpArea() {
+    camera.updateMatrixWorld(true);
+    glassRay.set(0, -0.84, 0.5).unproject(camera).sub(camera.position);
+    const t = (0.12 - camera.position.y) / glassRay.y;
+    const nearZ = camera.position.z + t * glassRay.z;
+    return { minX: -2.5, maxX: 6.2, minZ: 0.7, maxZ: clamp(nearZ, 1.2, 3.2) };
+  }
+  shrimp.setArea(shrimpArea());
 
   // The world height of the top edge of the screen, on the plane at depth z. Bubbles use it: the
   // water's surface (y = 10) is never drawn, and on a wide lens the top of the screen is above it.
@@ -1838,6 +1857,7 @@ export async function createRiverscape(canvas, options = {}) {
 
     bubbles.update(dt, elapsed);
     snails.update(dt, elapsed);
+    shrimp.update(dt, elapsed);
 
     for (let i = pellets.length - 1; i >= 0; i--) {
       const pellet = pellets[i];
@@ -1949,7 +1969,9 @@ export async function createRiverscape(canvas, options = {}) {
     placeStone();
     snails.setArea(snailArea());
     placePump();
-    bubbles.setSurface(Math.max(SURFACE_Y, topOfFrameAt(STONE.z) + 1.2)); // never below the real surface
+    shrimp.setArea(shrimpArea());
+    // never below the real surface; the pump's own, worked out at its depth, far back at the glass
+    bubbles.setSurface(Math.max(SURFACE_Y, topOfFrameAt(STONE.z) + 1.2), Math.max(SURFACE_Y, topOfFrameAt(PUMP.z) + 1.2));
     bubbles.setViewport(renderer.domElement.height, camera.fov);
     assignments = clockAssignments(new Date(), viewFrame());
   }
@@ -1988,5 +2010,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt } };
+  return { feed, showTime, advance, setClockArea, setFullView, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea } };
 }

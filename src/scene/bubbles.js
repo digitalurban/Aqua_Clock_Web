@@ -97,8 +97,9 @@ export function createBubbles(scene, cfg) {
   // on a lens wide enough to see above it the scene raises this to just past the top of the
   // screen, and the bubbles run off the top of the picture and not out in open water.
   let surfaceY = cfg.surfaceY;
+  let pumpSurfaceY = cfg.surfaceY; // the pump hangs far back, where the top of the screen is higher, so its bubbles pop higher
   const { lite, stone, pump, bedAt, absorb = [0.022, 0.0085, 0.0055] } = cfg;
-  const MAX = lite ? 760 : 1500;
+  const MAX = lite ? 1000 : 1800;
   const RATE_STONE = lite ? 115 : 230;
   const RATE_PUMP = lite ? 34 : 70;
 
@@ -169,7 +170,7 @@ export function createBubbles(scene, cfg) {
     b.r0 = b.r = rand(0.016, 0.036);
     b.vx = rand(2.2, 3.6); b.vy = rand(-0.25, 0.1);
     b.freq = rand(2, 5); b.phase = rand(0, 6.283);
-    b.life = rand(3, 5.5);
+    b.life = 99;   // they live until they reach the surface (pumpSurfaceY), not for a few seconds
   }
 
   function spawnPearl(e) {
@@ -217,7 +218,7 @@ export function createBubbles(scene, cfg) {
         b.x += b.vx * dt;
         b.y += b.vy * dt + Math.sin(b.phase + b.age * b.freq) * 0.12 * dt;
         fade = clamp(b.age / 0.25, 0, 1) * clamp((b.life - b.age) / 1.0, 0, 1) * 0.9;
-        if (b.age > b.life || b.y > surfaceY - 0.3) b.on = false;
+        if (b.age > b.life || b.y > pumpSurfaceY - 0.3) b.on = false;
       } else {
         b.y += b.vy * dt;
         b.x = b.ox + Math.sin(b.phase + b.age * b.freq) * 0.08;
@@ -239,8 +240,9 @@ export function createBubbles(scene, cfg) {
   return {
     update,
     /** Pixels per world unit at distance 1, from the drawing-buffer height and the vertical fov. */
-    setSurface(y) { surfaceY = y; },
+    setSurface(y, pumpY = y) { surfaceY = y; pumpSurfaceY = pumpY; },
     get surface() { return surfaceY; },
+    get pumpSurface() { return pumpSurfaceY; },
     setViewport(heightPx, fovDeg) {
       material.uniforms.uPxScale.value = heightPx / (2 * Math.tan((fovDeg * Math.PI) / 360));
     },

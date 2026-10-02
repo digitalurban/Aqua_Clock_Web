@@ -662,7 +662,9 @@ export async function createEnvironment(scene) {
       ),
     );
     const radius = Math.max(r.rx, r.ry, r.rz) * 0.82;
-    obstacles.push({ center: mesh.position.clone(), radius });
+    // PATCH (Aqua Clock): the obstacle also carries the stone's mesh, so the shrimp can climb on it
+    // and sit on its real surface. Nothing else reads this property.
+    obstacles.push({ center: mesh.position.clone(), radius, mesh });
     if (radius > 0.5)
       landmarks.push({
         kind: "rock",
