@@ -12,12 +12,12 @@ import { waterCaustic } from './riverscape/water.js';
  * surface are, and how bright the surface itself looks). The key light also moves across the
  * sky from one side of the tank to the other, and at night becomes a dim moon.
  *
- * By default it is Evening, a fixed look at about half past eight: dim and blue, the plants and
- * the sand still clear. Nothing follows the clock unless asked to. The sun button (or L) runs the
- * light on to the next look, evening, day, dusk, night, dawn and then the device's own clock; it
- * visibly runs on to that hour in a second or two, and the next press goes on. `?light=day`,
- * `?light=night`, `?light=19:30` or `?light=clock` opens at a chosen look, time, or following the
- * clock. Day is exactly the look the tank had before this existed.
+ * By default the hour is the device's own clock: bright by day, dim and blue in the evening and at
+ * night. The sun button (or L) runs the light on to the next look, dawn, day, dusk, night, a fixed
+ * evening look (about half past eight: dim and blue, the plants and the sand still clear) and then
+ * back to the clock; it visibly runs on to that hour in a second or two, and the next press goes
+ * on. `?light=day`, `?light=evening`, `?light=19:30` or `?light=clock` opens at a chosen look or
+ * time, or following the clock. Day is exactly the look the tank had before this existed.
  *
  * Noon is exactly the look the tank had before this existed.
  */
@@ -43,7 +43,7 @@ const NUMBERS = ['keyI', 'hemiI', 'fillI', 'backI', 'density', 'exposure', 'env'
 for (const look of LOOKS) for (const k of COLOURS) look[k] = new THREE.Color(look[k]);
 
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-const ORDER = ['evening', 'day', 'dusk', 'night', 'dawn', 'auto'];
+const ORDER = ['auto', 'dawn', 'day', 'dusk', 'night', 'evening'];
 const PRESET_HOUR = { evening: 20.5, dawn: 6.6, day: 12.5, dusk: 19.4, night: 0.8 };
 const SWEEP = 8; // hours per second, when it runs on to a chosen hour
 
@@ -55,8 +55,8 @@ export function createDaylight({ scene, renderer, hemi, key, fill, back, backboa
   for (const k of COLOURS) state[k] = new THREE.Color();
   for (const k of NUMBERS) state[k] = 0;
 
-  let mode = 'evening', fixedHour = 12;   // the default is a fixed look: it follows the clock only when asked to
-  let hour = PRESET_HOUR.evening, applied = -99;
+  let mode = 'auto', fixedHour = 12;   // the default follows the device's clock
+  let hour = localHour(), applied = -99;
 
   function blend(h) {
     let i = 0;

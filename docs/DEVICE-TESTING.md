@@ -43,8 +43,8 @@ model and iOS version. The footer says `render lite` or `render rich`.
 
 Tap **Full screen**. All text goes, the view zooms out (a wider lens, so more of the
 tank shows), and tapping or moving brings back four icons (time, feed, light, exit) for
-three seconds. The sun icon (or the L key) runs the light on to the next look: evening (the default,
-a fixed dim blue look), day, dusk, night, dawn, and the device's clock. Check each on the phone: faint beams should slant down through
+three seconds. The sun icon (or the L key) runs the light on to the next look: the device's clock
+(the default), dawn, day, dusk, night, and a fixed dim blue evening look. Check each on the phone: faint beams should slant down through
 the water, the sand should have soft moving light on it by day, and the clock should still
 read at night. `?light=dusk` or `?light=19:30` opens at one. `F` toggles and `Esc` leaves it on a keyboard.
 iPad Safari may go truly fullscreen; iPhone Safari cannot, so the text hides but the

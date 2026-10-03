@@ -85,8 +85,8 @@ running all night on a phone is the reason it is not simply *in* the app; see
 | `?quality=lite` / `?quality=rich` | force a profile. Touch screens and small machines get `lite` by default |
 | `?fog=grey` | stock grey fog instead of the per-channel water fog, for comparison |
 | `F` / `Esc` | enter / leave full screen |
-| `L`, or the sun icon in full screen | the next look for the light: evening (the default), day, dusk, night, dawn, then the device's clock |
-| `?light=day` (or `dusk`, `night`, `dawn`, `19:30`, `clock`) | open at one look, a time of day, or following the device's clock |
+| `L`, or the sun icon in full screen | the next look for the light: the device's clock (the default), dawn, day, dusk, night, then a fixed evening look |
+| `?light=day` (or `dusk`, `night`, `dawn`, `evening`, `19:30`, `clock`) | open at one look or a time of day; the default follows the device's clock |
 | `?surface=on` | add a rippled underside of the water's surface at the top of a wide picture (off by default) |
 
 On iPhone, Safari has no Fullscreen API, so the view hides the text but keeps the address
@@ -124,9 +124,9 @@ bar. For none at all: open it with `#full`, then Share, Add to Home Screen.
 - **Water.** Per-channel fog, so distance turns the tank blue-teal rather than grey;
   and Habitats' own light model for everything under it.
 - **Light.** Faint beams of light come down through the water, and soft light moves over the
-  sand and the stones. It opens on a fixed dim blue evening look. The sun button in the full
-  screen view (or `L`) runs the light on through day, dusk, night and dawn, and to the device's
-  own clock.
+  sand and the stones. By default it follows the device's clock: bright by day, dim and blue at
+  night. The sun button in the full screen view (or `L`) runs the light on to dawn, day, dusk,
+  night or a fixed evening look, and back to the clock.
 - **Two profiles.** `rich` is Riverscape as published. `lite` drops the shadow pass and
   thins the planting, for phones and older tablets. Both are always multisampled: the
   plants use alpha-to-coverage, which without MSAA breaks up into flickering dots.
