@@ -42,6 +42,39 @@ const FISH_COUNT = 4 * 7 * FISH_PER_SEGMENT; // every segment of "88:88" manned
 const CLOCK_ACTIVE_SECONDS = 15; // the shoal forms for the first 15 s of each minute
 const BOUNDS = { x: 6.2, yMin: 1.5, yMax: 8.4, zMin: -3.6, zMax: 2.4 };
 
+/*
+ * What the shoal may use of the tank. BOUNDS above was a fixed box, narrower than a wide picture
+ * and wider than an upright phone's, and capped below the top of a tall one. So the limits follow
+ * the camera instead: at any depth, the sides, top and bottom of what the screen shows, less a
+ * margin, held inside the water (below the surface, above the sand) and inside a cap on the width.
+ * The camera is set by the scene (see updateShoalView); until then the old box is used.
+ */
+const SHOAL = { ready: false, camY: 4.65, camZ: 20.5, kx: 0, kyTop: 0, kyBot: 0, xCap: 12, yFloor: 0.9, yCeil: 9.3, marginX: 0.6, marginY: 0.5 };
+const SHOAL_LIMITS = { x: BOUNDS.x, yMin: BOUNDS.yMin, yMax: BOUNDS.yMax };
+function shoalLimits(z) {
+  const L = SHOAL_LIMITS;
+  if (!SHOAL.ready) { L.x = BOUNDS.x; L.yMin = BOUNDS.yMin; L.yMax = BOUNDS.yMax; return L; }
+  const dist = SHOAL.camZ - z;
+  L.x = clamp(SHOAL.kx * dist - SHOAL.marginX, 1.6, SHOAL.xCap);
+  L.yMax = clamp(SHOAL.camY + SHOAL.kyTop * dist - SHOAL.marginY, 4, SHOAL.yCeil);
+  L.yMin = clamp(SHOAL.camY - SHOAL.kyBot * dist + SHOAL.marginY, SHOAL.yFloor, L.yMax - 2.5);
+  return L;
+}
+/*
+ * A place for a fish to swim to. Picking uniformly would pile the shoal up in the middle (fish
+ * heading for random places on opposite sides all cross it on the way), so a good share of the
+ * picks are out in the outer bands: left, right, low and high.
+ */
+function pickWaypoint(out, zMax) {
+  const z = rand(BOUNDS.zMin, zMax);
+  const L = shoalLimits(z);
+  let ux = rand(-1, 1);
+  if (Math.random() < 0.45) ux = (ux < 0 ? -1 : 1) * rand(0.65, 1);
+  let uy = rand(0, 1);
+  if (Math.random() < 0.35) uy = Math.random() < 0.5 ? rand(0, 0.28) : rand(0.72, 1);
+  return out.set(ux * L.x, L.yMin + uy * (L.yMax - L.yMin), z);
+}
+
 /* Seven-segment digits, as the app itself uses. Order is A B C D E F G:
  * top, upper-right, lower-right, bottom, lower-left, upper-left, middle. */
 const SEVEN_SEGMENT = [
@@ -735,10 +768,11 @@ function dismissTarget(index) {
   const edge = index % 4;
   const r = stableRandom(index * 17 + 3);
   const depth = -1.6 - stableRandom(index * 29 + 11) * 2;
-  if (edge === 0) return { x: -BOUNDS.x + r * 2 * BOUNDS.x, y: BOUNDS.yMax - 0.3, z: depth, station: false };
-  if (edge === 1) return { x: -BOUNDS.x + r * 2 * BOUNDS.x, y: BOUNDS.yMin + 0.3, z: depth, station: false };
-  if (edge === 2) return { x: -BOUNDS.x + 0.4, y: BOUNDS.yMin + r * (BOUNDS.yMax - BOUNDS.yMin), z: depth, station: false };
-  return { x: BOUNDS.x - 0.4, y: BOUNDS.yMin + r * (BOUNDS.yMax - BOUNDS.yMin), z: depth, station: false };
+  const L = shoalLimits(depth);
+  if (edge === 0) return { x: -L.x + r * 2 * L.x, y: L.yMax - 0.3, z: depth, station: false };
+  if (edge === 1) return { x: -L.x + r * 2 * L.x, y: L.yMin + 0.3, z: depth, station: false };
+  if (edge === 2) return { x: -L.x + 0.4, y: L.yMin + r * (L.yMax - L.yMin), z: depth, station: false };
+  return { x: L.x - 0.4, y: L.yMin + r * (L.yMax - L.yMin), z: depth, station: false };
 }
 
 /* ---------------------------------------------------------------- */
@@ -802,35 +836,19 @@ export function steerShoal(fish, assignments, ctx) {
       const distance = Math.max(offset.length(), 0.001);
       if (!f.dismissed && distance < 1.1) {
         f.dismissed = true;
-        f.wander.set(
-          rand(-BOUNDS.x, BOUNDS.x),
-          rand(BOUNDS.yMin, BOUNDS.yMax),
-          rand(BOUNDS.zMin, -1.2),
-        );
+        pickWaypoint(f.wander, -1.2);
       }
       if (f.dismissed) {
         // free again, but kept behind the digit plane so they do not swim
         // across the reading
-        if (f.position.distanceTo(f.wander) < 0.9) {
-          f.wander.set(
-            rand(-BOUNDS.x, BOUNDS.x),
-            rand(BOUNDS.yMin, BOUNDS.yMax),
-            rand(BOUNDS.zMin, -1.2),
-          );
-        }
+        if (f.position.distanceTo(f.wander) < 0.9) pickWaypoint(f.wander, -1.2);
         desired.copy(f.wander).sub(f.position).normalize().multiplyScalar(f.speed);
       } else {
         desired.copy(offset).divideScalar(distance).multiplyScalar(1.15);
       }
     } else {
       f.dismissed = false;
-      if (f.position.distanceTo(f.wander) < 0.9) {
-        f.wander.set(
-          rand(-BOUNDS.x, BOUNDS.x),
-          rand(BOUNDS.yMin, BOUNDS.yMax),
-          rand(BOUNDS.zMin, BOUNDS.zMax),
-        );
-      }
+      if (f.position.distanceTo(f.wander) < 0.9) pickWaypoint(f.wander, BOUNDS.zMax);
       desired.copy(f.wander).sub(f.position).normalize().multiplyScalar(f.speed);
 
       // nearest pellet wins over wandering
@@ -890,10 +908,11 @@ export function steerShoal(fish, assignments, ctx) {
     }
 
     // soft walls
-    if (f.position.x > BOUNDS.x) desired.x -= (f.position.x - BOUNDS.x) * 2;
-    if (f.position.x < -BOUNDS.x) desired.x -= (f.position.x + BOUNDS.x) * 2;
-    if (f.position.y > BOUNDS.yMax) desired.y -= (f.position.y - BOUNDS.yMax) * 2;
-    if (f.position.y < BOUNDS.yMin) desired.y -= (f.position.y - BOUNDS.yMin) * 2;
+    const L = shoalLimits(f.position.z);
+    if (f.position.x > L.x) desired.x -= (f.position.x - L.x) * 2;
+    if (f.position.x < -L.x) desired.x -= (f.position.x + L.x) * 2;
+    if (f.position.y > L.yMax) desired.y -= (f.position.y - L.yMax) * 2;
+    if (f.position.y < L.yMin) desired.y -= (f.position.y - L.yMin) * 2;
     if (f.position.z > BOUNDS.zMax) desired.z -= (f.position.z - BOUNDS.zMax) * 2;
     if (f.position.z < BOUNDS.zMin) desired.z -= (f.position.z - BOUNDS.zMin) * 2;
 
@@ -1575,6 +1594,23 @@ export async function createRiverscape(canvas, options = {}) {
     }
     return frame;
   }
+  // How much of the tank the camera shows at any depth, as constants: where the edges of the picture fall,
+  // per unit of distance in front of the camera. The shoal's limits are worked out from them.
+  const shoalRay = new THREE.Vector3();
+  function updateShoalView() {
+    camera.updateMatrixWorld(true);
+    const edge = (nx, ny) => shoalRay.set(nx, ny, 0.5).unproject(camera).sub(camera.position);
+    let d = edge(1, 0);
+    SHOAL.kx = Math.abs(d.x / d.z);
+    d = edge(0, 1);
+    SHOAL.kyTop = d.y / -d.z;
+    d = edge(0, -1);
+    SHOAL.kyBot = -d.y / -d.z;
+    SHOAL.camY = camera.position.y;
+    SHOAL.camZ = camera.position.z;
+    SHOAL.ready = true;
+  }
+
   /*
    * The full screen view zooms out a little. The page calls this whenever that mode is
    * entered or left. Everything that depends on the lens (the clock's layout, the air
@@ -1980,6 +2016,7 @@ export async function createRiverscape(canvas, options = {}) {
     camera.lookAt(0, 4.15 + (camera.fov - 25.8) * 0.07, 0);
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
+    updateShoalView();
     placeStone();
     snails.setArea(snailArea());
     placePump();
@@ -2026,5 +2063,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
+  return { feed, showTime, advance, setClockArea, setFullView, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }

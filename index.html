@@ -5222,6 +5222,39 @@ const FISH_COUNT = 4 * 7 * FISH_PER_SEGMENT; // every segment of "88:88" manned
 const CLOCK_ACTIVE_SECONDS = 15; // the shoal forms for the first 15 s of each minute
 const BOUNDS = { x: 6.2, yMin: 1.5, yMax: 8.4, zMin: -3.6, zMax: 2.4 };
 
+/*
+ * What the shoal may use of the tank. BOUNDS above was a fixed box, narrower than a wide picture
+ * and wider than an upright phone's, and capped below the top of a tall one. So the limits follow
+ * the camera instead: at any depth, the sides, top and bottom of what the screen shows, less a
+ * margin, held inside the water (below the surface, above the sand) and inside a cap on the width.
+ * The camera is set by the scene (see updateShoalView); until then the old box is used.
+ */
+const SHOAL = { ready: false, camY: 4.65, camZ: 20.5, kx: 0, kyTop: 0, kyBot: 0, xCap: 12, yFloor: 0.9, yCeil: 9.3, marginX: 0.6, marginY: 0.5 };
+const SHOAL_LIMITS = { x: BOUNDS.x, yMin: BOUNDS.yMin, yMax: BOUNDS.yMax };
+function shoalLimits(z) {
+  const L = SHOAL_LIMITS;
+  if (!SHOAL.ready) { L.x = BOUNDS.x; L.yMin = BOUNDS.yMin; L.yMax = BOUNDS.yMax; return L; }
+  const dist = SHOAL.camZ - z;
+  L.x = clamp(SHOAL.kx * dist - SHOAL.marginX, 1.6, SHOAL.xCap);
+  L.yMax = clamp(SHOAL.camY + SHOAL.kyTop * dist - SHOAL.marginY, 4, SHOAL.yCeil);
+  L.yMin = clamp(SHOAL.camY - SHOAL.kyBot * dist + SHOAL.marginY, SHOAL.yFloor, L.yMax - 2.5);
+  return L;
+}
+/*
+ * A place for a fish to swim to. Picking uniformly would pile the shoal up in the middle (fish
+ * heading for random places on opposite sides all cross it on the way), so a good share of the
+ * picks are out in the outer bands: left, right, low and high.
+ */
+function pickWaypoint(out, zMax) {
+  const z = rand(BOUNDS.zMin, zMax);
+  const L = shoalLimits(z);
+  let ux = rand(-1, 1);
+  if (Math.random() < 0.45) ux = (ux < 0 ? -1 : 1) * rand(0.65, 1);
+  let uy = rand(0, 1);
+  if (Math.random() < 0.35) uy = Math.random() < 0.5 ? rand(0, 0.28) : rand(0.72, 1);
+  return out.set(ux * L.x, L.yMin + uy * (L.yMax - L.yMin), z);
+}
+
 /* Seven-segment digits, as the app itself uses. Order is A B C D E F G:
  * top, upper-right, lower-right, bottom, lower-left, upper-left, middle. */
 const SEVEN_SEGMENT = [
@@ -5915,10 +5948,11 @@ function dismissTarget(index) {
   const edge = index % 4;
   const r = stableRandom(index * 17 + 3);
   const depth = -1.6 - stableRandom(index * 29 + 11) * 2;
-  if (edge === 0) return { x: -BOUNDS.x + r * 2 * BOUNDS.x, y: BOUNDS.yMax - 0.3, z: depth, station: false };
-  if (edge === 1) return { x: -BOUNDS.x + r * 2 * BOUNDS.x, y: BOUNDS.yMin + 0.3, z: depth, station: false };
-  if (edge === 2) return { x: -BOUNDS.x + 0.4, y: BOUNDS.yMin + r * (BOUNDS.yMax - BOUNDS.yMin), z: depth, station: false };
-  return { x: BOUNDS.x - 0.4, y: BOUNDS.yMin + r * (BOUNDS.yMax - BOUNDS.yMin), z: depth, station: false };
+  const L = shoalLimits(depth);
+  if (edge === 0) return { x: -L.x + r * 2 * L.x, y: L.yMax - 0.3, z: depth, station: false };
+  if (edge === 1) return { x: -L.x + r * 2 * L.x, y: L.yMin + 0.3, z: depth, station: false };
+  if (edge === 2) return { x: -L.x + 0.4, y: L.yMin + r * (L.yMax - L.yMin), z: depth, station: false };
+  return { x: L.x - 0.4, y: L.yMin + r * (L.yMax - L.yMin), z: depth, station: false };
 }
 
 /* ---------------------------------------------------------------- */
@@ -5982,35 +6016,19 @@ function steerShoal(fish, assignments, ctx) {
       const distance = Math.max(offset.length(), 0.001);
       if (!f.dismissed && distance < 1.1) {
         f.dismissed = true;
-        f.wander.set(
-          rand(-BOUNDS.x, BOUNDS.x),
-          rand(BOUNDS.yMin, BOUNDS.yMax),
-          rand(BOUNDS.zMin, -1.2),
-        );
+        pickWaypoint(f.wander, -1.2);
       }
       if (f.dismissed) {
         // free again, but kept behind the digit plane so they do not swim
         // across the reading
-        if (f.position.distanceTo(f.wander) < 0.9) {
-          f.wander.set(
-            rand(-BOUNDS.x, BOUNDS.x),
-            rand(BOUNDS.yMin, BOUNDS.yMax),
-            rand(BOUNDS.zMin, -1.2),
-          );
-        }
+        if (f.position.distanceTo(f.wander) < 0.9) pickWaypoint(f.wander, -1.2);
         desired.copy(f.wander).sub(f.position).normalize().multiplyScalar(f.speed);
       } else {
         desired.copy(offset).divideScalar(distance).multiplyScalar(1.15);
       }
     } else {
       f.dismissed = false;
-      if (f.position.distanceTo(f.wander) < 0.9) {
-        f.wander.set(
-          rand(-BOUNDS.x, BOUNDS.x),
-          rand(BOUNDS.yMin, BOUNDS.yMax),
-          rand(BOUNDS.zMin, BOUNDS.zMax),
-        );
-      }
+      if (f.position.distanceTo(f.wander) < 0.9) pickWaypoint(f.wander, BOUNDS.zMax);
       desired.copy(f.wander).sub(f.position).normalize().multiplyScalar(f.speed);
 
       // nearest pellet wins over wandering
@@ -6070,10 +6088,11 @@ function steerShoal(fish, assignments, ctx) {
     }
 
     // soft walls
-    if (f.position.x > BOUNDS.x) desired.x -= (f.position.x - BOUNDS.x) * 2;
-    if (f.position.x < -BOUNDS.x) desired.x -= (f.position.x + BOUNDS.x) * 2;
-    if (f.position.y > BOUNDS.yMax) desired.y -= (f.position.y - BOUNDS.yMax) * 2;
-    if (f.position.y < BOUNDS.yMin) desired.y -= (f.position.y - BOUNDS.yMin) * 2;
+    const L = shoalLimits(f.position.z);
+    if (f.position.x > L.x) desired.x -= (f.position.x - L.x) * 2;
+    if (f.position.x < -L.x) desired.x -= (f.position.x + L.x) * 2;
+    if (f.position.y > L.yMax) desired.y -= (f.position.y - L.yMax) * 2;
+    if (f.position.y < L.yMin) desired.y -= (f.position.y - L.yMin) * 2;
     if (f.position.z > BOUNDS.zMax) desired.z -= (f.position.z - BOUNDS.zMax) * 2;
     if (f.position.z < BOUNDS.zMin) desired.z -= (f.position.z - BOUNDS.zMin) * 2;
 
@@ -6755,6 +6774,23 @@ async function createRiverscape(canvas, options = {}) {
     }
     return frame;
   }
+  // How much of the tank the camera shows at any depth, as constants: where the edges of the picture fall,
+  // per unit of distance in front of the camera. The shoal's limits are worked out from them.
+  const shoalRay = new THREE.Vector3();
+  function updateShoalView() {
+    camera.updateMatrixWorld(true);
+    const edge = (nx, ny) => shoalRay.set(nx, ny, 0.5).unproject(camera).sub(camera.position);
+    let d = edge(1, 0);
+    SHOAL.kx = Math.abs(d.x / d.z);
+    d = edge(0, 1);
+    SHOAL.kyTop = d.y / -d.z;
+    d = edge(0, -1);
+    SHOAL.kyBot = -d.y / -d.z;
+    SHOAL.camY = camera.position.y;
+    SHOAL.camZ = camera.position.z;
+    SHOAL.ready = true;
+  }
+
   /*
    * The full screen view zooms out a little. The page calls this whenever that mode is
    * entered or left. Everything that depends on the lens (the clock's layout, the air
@@ -7160,6 +7196,7 @@ async function createRiverscape(canvas, options = {}) {
     camera.lookAt(0, 4.15 + (camera.fov - 25.8) * 0.07, 0);
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
+    updateShoalView();
     placeStone();
     snails.setArea(snailArea());
     placePump();
@@ -7206,7 +7243,7 @@ async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
+  return { feed, showTime, advance, setClockArea, setFullView, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }
 
       const canvas = document.getElementById('scene');
@@ -7312,41 +7349,78 @@ async function createRiverscape(canvas, options = {}) {
        * iPhone home-screen mode. The layout viewport can stop short of the bottom of the screen (the
        * strip the home indicator sits in), even with viewport-fit=cover, and the page background then
        * shows as a bar under the tank. So, in that mode only, the canvas is made as tall as the screen
-       * really is.
+       * really is, in two independent ways:
+       *   1. it is given a minimum height of 100lvh, the largest viewport, which in home-screen mode
+       *      should be the whole screen (100vh where lvh is not known);
+       *   2. what the CSS actually gave the canvas (its box with no height of its own) is measured
+       *      against the screen's height, and the canvas stretched by the difference. The sizes the
+       *      browser reports in script (innerHeight and the others) are not trusted: on the iPhone
+       *      they can disagree with the layout, and they change when Full screen is entered.
+       * It is checked again whenever the size could have changed, after Full screen, and every couple
+       * of seconds, because the phone updates its sizes late. If the gap is not a small one (a window
+       * smaller than the screen, as in split view) the measured stretch does nothing. Not used in a
+       * normal browser.
        *
-       * The gap is found by measuring what the CSS actually gave the canvas (its box with no height of
-       * its own), against the screen's height. The sizes the browser reports in script (innerHeight and
-       * the others) are not trusted: on the iPhone they can disagree with the layout, and they change
-       * when Full screen is entered. It is checked again whenever the size could have changed, after
-       * Full screen, and every couple of seconds, because the phone updates its sizes late. If the
-       * gap is not a small one (a window smaller than the screen, as in split view) nothing changes.
-       * Not used in a normal browser. `?debug=viewport` prints the numbers on the screen.
+       * To see the numbers on the phone, press and hold on the picture for a second (or open the page
+       * with ?debug=viewport): a small panel prints them. Press and hold again to hide it.
        */
       (function () {
+        var BUILD = 'home-screen fix 3';
         var canvas = document.getElementById('scene');
         var standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-        if (!canvas || !standalone) return;
+        if (!canvas) return;
+        // (the numbers panel works in any mode; the fix itself only acts in home-screen mode)
+        if (standalone) {
+          canvas.style.minHeight = '100vh';
+          canvas.style.minHeight = '100lvh';        // ignored, leaving 100vh, where lvh is not known
+        }
         var tag = null;
-        if (/[?&]debug=viewport/.test(location.search)) {
+        var probes = {};
+        function probe(unit) {
+          if (!probes[unit]) {
+            var d = document.createElement('div');
+            d.style.cssText = 'position:fixed;top:0;left:0;width:1px;visibility:hidden;pointer-events:none;height:100' + unit;
+            document.body.appendChild(d);
+            probes[unit] = d;
+          }
+          return probes[unit].offsetHeight;
+        }
+        function at(x, y) {
+          var e = document.elementFromPoint(x, y);
+          return e ? e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') : 'nothing';
+        }
+        function showTag() {
+          if (tag) { tag.remove(); tag = null; return; }
           tag = document.createElement('pre');
-          tag.style.cssText = 'position:fixed;left:6px;top:calc(env(safe-area-inset-top,0px) + 4px);z-index:99;margin:0;padding:6px 8px;border-radius:6px;background:rgba(0,0,0,.7);color:#9f9;font:10px/1.35 ui-monospace,monospace;pointer-events:none;white-space:pre';
+          tag.style.cssText = 'position:fixed;left:6px;top:calc(env(safe-area-inset-top,0px) + 44px);z-index:99;margin:0;padding:6px 8px;border-radius:6px;background:rgba(0,0,0,.72);color:#9f9;font:10px/1.35 ui-monospace,monospace;pointer-events:none;white-space:pre';
           document.body.appendChild(tag);
+          cover();
         }
         function cover() {
+          if (!standalone && !tag) return;                       // nothing to do, and nothing to show
           var portrait = window.innerHeight >= window.innerWidth;
           // iOS reports `screen` in portrait terms whichever way the phone is held
           var full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-          canvas.style.height = '';                              // let the CSS say how tall it would be
-          var natural = canvas.getBoundingClientRect().height;
-          var gap = full - natural;
-          canvas.style.height = gap > 0 && gap < 120 ? (full + 2) + 'px' : '';
+          var natural, gap;
+          if (standalone) {
+            canvas.style.height = '';                            // let the CSS say how tall it would be
+            natural = canvas.getBoundingClientRect().height;
+            gap = full - natural;
+            canvas.style.height = gap > 0 && gap < 120 ? (full + 2) + 'px' : '';
+          } else {
+            natural = canvas.getBoundingClientRect().height;
+            gap = full - natural;
+          }
           if (tag) {
-            var vv = window.visualViewport;
-            tag.textContent = 'screen ' + screen.width + 'x' + screen.height + '  full ' + full +
+            var vv = window.visualViewport, r = canvas.getBoundingClientRect();
+            tag.textContent = BUILD + '\nstandalone ' + navigator.standalone + ' / ' + (window.matchMedia && matchMedia('(display-mode: standalone)').matches) +
+              '\nscreen ' + screen.width + 'x' + screen.height + '  full ' + full +
               '\ninner ' + innerWidth + 'x' + innerHeight + '  layout ' + document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight +
               '\nvisual ' + (vv ? Math.round(vv.width) + 'x' + Math.round(vv.height) + ' @' + vv.scale : 'n/a') +
-              '\ncss height ' + Math.round(natural) + '  gap ' + Math.round(gap) + '\nset ' + (canvas.style.height || 'none') +
-              '  full-class ' + document.body.classList.contains('full');
+              '\nvh ' + probe('vh') + '  lvh ' + probe('lvh') + '  dvh ' + probe('dvh') +
+              '\ncanvas css ' + Math.round(natural) + '  gap ' + Math.round(gap) + '  set ' + (canvas.style.height || 'none') + '  rect bottom ' + Math.round(r.bottom) +
+              '\nat bottom: ' + at(innerWidth / 2, innerHeight - 3) + '  body bg ' + getComputedStyle(document.body).backgroundColor +
+              '\nfull-class ' + document.body.classList.contains('full');
           }
         }
         function soon() { cover(); setTimeout(cover, 150); setTimeout(cover, 600); setTimeout(cover, 1500); }
@@ -7358,7 +7432,12 @@ async function createRiverscape(canvas, options = {}) {
         document.addEventListener('fullscreenchange', soon);
         document.addEventListener('webkitfullscreenchange', soon);
         if (window.visualViewport) window.visualViewport.addEventListener('resize', cover);
-        setInterval(cover, 2000);
+        setInterval(cover, 2000);   // (does nothing outside home-screen mode unless the panel is showing)
+        // press and hold on the picture to show or hide the numbers
+        var hold = 0;
+        document.addEventListener('touchstart', function (e) { clearTimeout(hold); if (e.touches.length === 1) hold = setTimeout(showTag, 900); }, { passive: true });
+        ['touchend', 'touchmove', 'touchcancel'].forEach(function (ev) { document.addEventListener(ev, function () { clearTimeout(hold); }, { passive: true }); });
+        if (/[?&]debug=viewport/.test(location.search)) showTag();
       })();
     </script>
   </body>
