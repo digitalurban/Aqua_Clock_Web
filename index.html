@@ -7312,23 +7312,53 @@ async function createRiverscape(canvas, options = {}) {
        * iPhone home-screen mode. The layout viewport can stop short of the bottom of the screen (the
        * strip the home indicator sits in), even with viewport-fit=cover, and the page background then
        * shows as a bar under the tank. So, in that mode only, the canvas is made as tall as the screen
-       * really is: the screen's own height, from `screen`, against the height the page was given. If
-       * there is no such gap, or it is not a small one, nothing changes. Not used in a normal browser.
+       * really is.
+       *
+       * The gap is found by measuring what the CSS actually gave the canvas (its box with no height of
+       * its own), against the screen's height. The sizes the browser reports in script (innerHeight and
+       * the others) are not trusted: on the iPhone they can disagree with the layout, and they change
+       * when Full screen is entered. It is checked again whenever the size could have changed, after
+       * Full screen, and every couple of seconds, because the phone updates its sizes late. If the
+       * gap is not a small one (a window smaller than the screen, as in split view) nothing changes.
+       * Not used in a normal browser. `?debug=viewport` prints the numbers on the screen.
        */
       (function () {
         var canvas = document.getElementById('scene');
         var standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
         if (!canvas || !standalone) return;
+        var tag = null;
+        if (/[?&]debug=viewport/.test(location.search)) {
+          tag = document.createElement('pre');
+          tag.style.cssText = 'position:fixed;left:6px;top:calc(env(safe-area-inset-top,0px) + 4px);z-index:99;margin:0;padding:6px 8px;border-radius:6px;background:rgba(0,0,0,.7);color:#9f9;font:10px/1.35 ui-monospace,monospace;pointer-events:none;white-space:pre';
+          document.body.appendChild(tag);
+        }
         function cover() {
           var portrait = window.innerHeight >= window.innerWidth;
           // iOS reports `screen` in portrait terms whichever way the phone is held
           var full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-          var gap = full - window.innerHeight;
+          canvas.style.height = '';                              // let the CSS say how tall it would be
+          var natural = canvas.getBoundingClientRect().height;
+          var gap = full - natural;
           canvas.style.height = gap > 0 && gap < 120 ? (full + 2) + 'px' : '';
+          if (tag) {
+            var vv = window.visualViewport;
+            tag.textContent = 'screen ' + screen.width + 'x' + screen.height + '  full ' + full +
+              '\ninner ' + innerWidth + 'x' + innerHeight + '  layout ' + document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight +
+              '\nvisual ' + (vv ? Math.round(vv.width) + 'x' + Math.round(vv.height) + ' @' + vv.scale : 'n/a') +
+              '\ncss height ' + Math.round(natural) + '  gap ' + Math.round(gap) + '\nset ' + (canvas.style.height || 'none') +
+              '  full-class ' + document.body.classList.contains('full');
+          }
         }
+        function soon() { cover(); setTimeout(cover, 150); setTimeout(cover, 600); setTimeout(cover, 1500); }
         cover();
         window.addEventListener('resize', cover);
-        window.addEventListener('orientationchange', function () { setTimeout(cover, 250); });
+        window.addEventListener('orientationchange', soon);
+        window.addEventListener('aqua-layout', soon);          // Full screen is entered or left
+        window.addEventListener('pageshow', soon);
+        document.addEventListener('fullscreenchange', soon);
+        document.addEventListener('webkitfullscreenchange', soon);
+        if (window.visualViewport) window.visualViewport.addEventListener('resize', cover);
+        setInterval(cover, 2000);
       })();
     </script>
   </body>
