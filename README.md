@@ -7,7 +7,7 @@ to tell the time.
 ### ▶ [View it via: digitalurban.org/Aqua_Clock_Web](https://digitalurban.org/Aqua_Clock_Web/)
 
 
-![The tank in full screen view: no text, the shoal spelling the time](docs/images/desktop-clean.jpg)
+![The tank by day: the shoal spelling 12:34](docs/images/desktop-clean.jpg)
 
 ## The story
 
@@ -20,12 +20,13 @@ Six months on, we came across [**Desktop Habitats**](https://github.com/chaselea
 Aqua Clock's flat 2D scene. As such the draw to update our time-telling aquarium was strong and we pointed Claude's latest model at the Habitats repository. It read the Habitats code, brought
 the tank in (with credit, see below), and built the clock, the clownfish, the bubbles and
 their behaviour on top. This repo is the result: a new, web-based Aqua Clock that runs in
-any browser.
+any browser. We got in touch with Chase along the way: he liked it, and said to feel free to
+build anything on top of it.
 
 <table>
 <tr>
 <td width="50%"><img src="docs/images/app-march-2026.jpg" alt="Boids in the Aquarium: the Aqua Clock app, March 2026"><br><sub><b>March 2026, the app</b> (screenshot from <a href="https://connected-environments.org/blog/2026-03-20-aqua-clock-vibe-coding-boids-fish-tell-time/">the post</a>). 2D, HTML5 Canvas, 28 tetras, a 10.5 MB iOS app. Built with Claude and Gemini AI Studio.</sub></td>
-<td width="50%"><img src="docs/images/desktop-clean.jpg" alt="This web version, full screen view"><br><sub><b>September 2026, this web version.</b> 3D, WebGL2, 84 tetras and two clownfish, one page of about 550 kB. Built with Claude Sonnet 5.5.</sub></td>
+<td width="50%"><img src="docs/images/desktop-clean.jpg" alt="This web version: the shoal spelling the time"><br><sub><b>September 2026, this web version.</b> 3D, WebGL2, 84 tetras and two clownfish, one page of about 640 kB. Built with Claude Sonnet 5.5.</sub></td>
 </tr>
 </table>
 
