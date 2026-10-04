@@ -1626,10 +1626,19 @@ export async function createRiverscape(canvas, options = {}) {
   // The pump sits at the left edge, partly cropped, as it always has. In the full screen view
   // on a landscape screen the lens is wide enough to show all of it, so it is set a little in
   // from the edge, whatever the screen's width. Upright screens keep it out of view.
+  // The part of each edge of the screen that cannot be used (a phone's notch, island and rounded
+  // corners), in CSS pixels, as the page measures it.
+  const SAFE = { left: 0, right: 0, top: 0, bottom: 0 };
+  function setSafeArea(s) {
+    for (const k of ['left', 'right', 'top', 'bottom']) SAFE[k] = Math.max(0, +(s && s[k]) || 0);
+    placePump();
+  }
   function placePump() {
     if (fullView && camera.aspect >= 1.25) {
       const halfWidth = Math.tan((camera.fov * Math.PI) / 360) * camera.aspect * (camera.position.z - PUMP.z);
-      PUMP.x = -(halfWidth - 1.4 * PUMP_SCALE);
+      // set in from the left edge by the pump's own margin and by the notch, converted to world units
+      const notch = SAFE.left * ((2 * halfWidth) / Math.max(canvas.clientWidth, 1));
+      PUMP.x = -(halfWidth - 1.4 * PUMP_SCALE - notch);
     } else {
       PUMP.x = -7.9 * PUMP_SCALE;
     }
@@ -2010,7 +2019,12 @@ export async function createRiverscape(canvas, options = {}) {
     // the tank shows. Narrower screens widen it further (up to 42), as they always did, so
     // the upright phone view is unchanged; taking the larger of the two keeps it continuous as
     // a window changes shape.
-    camera.fov = Math.max(fullView ? 38 : 25.8, clamp(25.8 * Math.sqrt(1.25 / camera.aspect), 25.8, 42));
+    // The full screen lens is set by the height, so on a very wide screen (a phone on its side is over
+    // 2:1) it shows far more water to the sides than there is tank. So it is narrowed there, to keep
+    // the width it shows about what a 16:10 screen shows: 38 degrees on anything up to about 16:9,
+    // less on wider ones.
+    const fullFov = clamp((2 * Math.atan(12.5 / (Math.max(camera.aspect, 1) * camera.position.z)) * 180) / Math.PI, 28, 38);
+    camera.fov = Math.max(fullView ? fullFov : 25.8, clamp(25.8 * Math.sqrt(1.25 / camera.aspect), 25.8, 42));
     // a wider lens also sees further down, past the end of the substrate, so it
     // looks up a little as it widens
     camera.lookAt(0, 4.15 + (camera.fov - 25.8) * 0.07, 0);
@@ -2063,5 +2077,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
+  return { feed, showTime, advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }
