@@ -57,6 +57,10 @@ _sh = open('src/scene/shrimp.js').read()
 _sh = re.sub(r'^import .*\n', '', _sh, flags=re.M)
 _sh = _sh.replace('export function createShrimp', 'function createShrimp')
 bundle.append('const createShrimp = (function () {\n' + _sh + '\nreturn createShrimp;\n})();')
+_cr = open('src/scene/crab.js').read()
+_cr = re.sub(r'^import .*\n', '', _cr, flags=re.M)
+_cr = _cr.replace('export function createCrabs', 'function createCrabs')
+bundle.append('const createCrabs = (function () {\n' + _cr + '\nreturn createCrabs;\n})();')
 
 # daylight.js and surface.js export more than one name between them, so each is wrapped in an
 # IIFE that hands its names back
@@ -69,7 +73,7 @@ bundle.append(wrap_module('src/scene/daylight.js', ['createDaylight']))
 bundle.append(wrap_module('src/scene/surface.js', ['createSurface', 'createShafts']))
 
 scene = open('src/scene/riverscape.js').read()
-scene = re.sub(r"import \{[^}]*\} from '\./(riverscape/[a-z]+|textures|bubbles|snails|shrimp|daylight|surface)\.js';\n", '', scene)
+scene = re.sub(r"import \{[^}]*\} from '\./(riverscape/[a-z]+|textures|bubbles|snails|shrimp|crab|daylight|surface)\.js';\n", '', scene)
 scene = scene.replace('export function setFishDetail', 'function setFishDetail')
 scene = scene.replace("import * as THREE from 'three';", '')
 scene = scene.replace('export async function createRiverscape', 'async function createRiverscape')

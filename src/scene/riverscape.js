@@ -19,6 +19,7 @@ import { setLOD } from './riverscape/lod.js';
 import { createBubbles } from './bubbles.js';
 import { createSnails } from './snails.js';
 import { createShrimp } from './shrimp.js';
+import { createCrabs } from './crab.js';
 import { createDaylight } from './daylight.js';
 import { createSurface, createShafts } from './surface.js';
 
@@ -1251,6 +1252,9 @@ export async function createRiverscape(canvas, options = {}) {
   // Ghost shrimp on the sand in the front of the tank: they walk, pick at the sand, groom their
   // antennae, and now and then flick the tail. They steer round the stones, and the air stone.
   const shrimp = createShrimp(scene, { count: 2, ground: BED, obstacles: [...obstacles, stoneObstacle] });
+  // Small crabs on the same sand: shy, sitting still with the legs tucked, grazing with their claws,
+  // walking sideways, and climbing the low stones.
+  const crabs = createCrabs(scene, { count: 2, ground: BED, obstacles: [...obstacles, stoneObstacle] });
 
   // The light of the day (it follows the device's clock, or is set to a look), the surface of the water
   // seen from below, and the beams that come down through it.
@@ -1270,6 +1274,20 @@ export async function createRiverscape(canvas, options = {}) {
     return { minX: -2.5, maxX: 6.2, minZ: 0.7, maxZ: clamp(nearZ, 1.2, 3.2) };
   }
   shrimp.setArea(shrimpArea());
+  // The sand the crabs may use: the same depth as the shrimp's, but as wide as the screen shows it, less
+  // a margin, and not the fixed strip the shrimp use, so they are found across the whole picture and not
+  // only in the middle. Once the scene knows what the screen shows, they are scattered across it.
+  function crabArea() {
+    const a = shrimpArea();
+    const half = Math.max(2.2, SHOAL.kx * (SHOAL.camZ - a.maxZ) - 0.9);
+    return { minX: -half, maxX: half, minZ: a.minZ, maxZ: a.maxZ };
+  }
+  let crabsScattered = false;
+  function updateCrabArea() {
+    crabs.setArea(crabArea());
+    if (!crabsScattered && SHOAL.ready) { crabsScattered = true; crabs.scatter(); }
+  }
+  updateCrabArea();
 
   // The world height of the top edge of the screen, on the plane at depth z. Bubbles use it: the
   // water's surface (y = 10) is never drawn, and on a wide lens the top of the screen is above it.
@@ -1913,6 +1931,7 @@ export async function createRiverscape(canvas, options = {}) {
     bubbles.update(dt, elapsed);
     snails.update(dt, elapsed);
     shrimp.update(dt, elapsed);
+    crabs.update(dt, elapsed);
     daylight.update(dt);
     bubbles.setLight(0.35 + 0.65 * Math.min(1, daylight.state.keyI / 4.5)); // glass shows the light there is
     waterSurface.update(elapsed, daylight.state);
@@ -2035,6 +2054,7 @@ export async function createRiverscape(canvas, options = {}) {
     snails.setArea(snailArea());
     placePump();
     shrimp.setArea(shrimpArea());
+  updateCrabArea();
     // The surface is not drawn (unless ?surface=on), so the bubbles pop just past the top edge of the
     // picture, not at the waterline: never below the real surface; the pump's own is worked out at its
     // depth, far back at the glass.
@@ -2077,5 +2097,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
+  return { feed, showTime, advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { crabs, pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }
