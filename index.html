@@ -280,6 +280,51 @@
         color: #dcece4; font-size: 13px; letter-spacing: 0.04em; opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
       }
       .lightlabel.show { opacity: 1; }
+      /* ---- settings: a gear beside the sun, in the top bar, and in the button row on touch screens ---- */
+      .navright { display: flex; gap: 8px; align-items: center; }
+      .gearbtn { width: 38px; height: 38px; padding: 0; display: inline-grid; place-items: center; }
+      .gearbtn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+      @media (pointer: coarse), (max-width: 760px), (max-height: 500px) { #settings-top { display: none; } }
+      .settings {
+        position: fixed; z-index: 30; right: max(24px, env(safe-area-inset-right, 0px)); top: calc(66px + env(safe-area-inset-top, 0px));   /* above the page layer (10), below the loading veil (40) */
+        width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - 100px); overflow: auto; overscroll-behavior: contain;
+        padding: 16px 20px 14px; border-radius: 20px; color: var(--ink); font-size: 13.5px;
+        background: rgba(6, 20, 30, 0.84); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(160, 200, 220, 0.18); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+      }
+      .settings[hidden] { display: none; }
+      @media (pointer: coarse), (max-width: 760px) {
+        .settings { left: 12px; right: 12px; width: auto; top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-height: 78vh; }
+      }
+      .set-title { display: flex; justify-content: space-between; align-items: center; font-size: 15px; margin-bottom: 4px; }
+      .set-title button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: transparent; color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; }
+      .set-title button:hover { background: rgba(255, 255, 255, 0.1); }
+      .set-group { margin: 12px 0 2px; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+      .set-row { margin: 8px 0; }
+      .set-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+      .set-head b { font-weight: 500; color: var(--accent); }
+      .set-hint { color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.4; }
+      .settings input[type='range'] { width: 100%; height: 28px; accent-color: var(--accent); margin: 0; }
+      .chips { display: flex; gap: 6px; margin: 6px 0 2px; }
+      .chip { flex: 1; position: relative; cursor: pointer; }
+      .chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+      .chip span { display: block; text-align: center; padding: 8px 0; border-radius: 999px; background: rgba(255, 255, 255, 0.09); }
+      .chip input:checked + span { background: var(--accent); color: #04141c; font-weight: 500; }
+      .chip input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+      .toggle { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; cursor: pointer; position: relative; }
+      .toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+      .toggle i { width: 40px; height: 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); position: relative; transition: background 0.2s; flex: none; }
+      .toggle i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
+      .toggle input:checked + i { background: var(--accent); }
+      .toggle input:checked + i::after { transform: translateX(16px); }
+      .toggle input:focus-visible + i { outline: 2px solid #fff; outline-offset: 2px; }
+      .seg { display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); }
+      .seg button { flex: 1; border: 0; border-radius: 999px; padding: 8px 0; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+      .seg button[aria-pressed='true'] { background: var(--accent); color: #04141c; font-weight: 500; }
+      .set-reset { margin-top: 10px; width: 100%; padding: 9px 0; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+      .set-reset:hover { color: var(--ink); border-color: rgba(110, 199, 222, 0.4); }
+      /* clock mode off: just an aquarium, so nothing about the time */
+      body.noclock #showtime, body.noclock #fu-time, body.noclock .clockonly { display: none !important; }
       body.full.idle, body.full.idle canvas { cursor: none; }
       @media (max-width: 760px) {
         .links { display: none; }
@@ -305,15 +350,54 @@
       <button type="button" id="fu-time" aria-label="Show the time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></button>
       <button type="button" id="fu-feed" aria-label="Feed the fish"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="2"/><circle cx="15.5" cy="7.5" r="1.6"/><circle cx="12" cy="14" r="2.2"/><circle cx="17.5" cy="16" r="1.5"/><circle cx="6.5" cy="17" r="1.4"/></svg></button>
       <button type="button" id="fu-light" aria-label="Change the light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg></button>
+      <button type="button" id="fu-settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
       <button type="button" id="fu-exit" aria-label="Exit full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
     </div>
     <div class="lightlabel" id="lightlabel" role="status" aria-live="polite"></div>
+    <div class="settings" id="settings" role="dialog" aria-label="Settings" hidden>
+      <div class="set-title"><b>Settings</b><button type="button" id="set-close" aria-label="Close settings">&times;</button></div>
+
+      <div class="set-group">The tank</div>
+      <div class="set-row">
+        <div class="set-head"><label for="set-fish">Fish</label><b id="set-fish-val">84</b></div>
+        <input type="range" id="set-fish" min="78" max="240" step="1" value="84" />
+        <div class="set-hint" id="set-fish-hint"></div>
+      </div>
+      <div class="set-row">
+        <div class="set-head"><label for="set-bubbles">Bubbles</label><b id="set-bubbles-val">Normal</b></div>
+        <input type="range" id="set-bubbles" min="0" max="2.5" step="0.05" value="1" />
+      </div>
+      <div class="set-group">Creatures</div>
+      <div class="chips">
+        <label class="chip"><input type="checkbox" id="set-shrimp" /><span>Shrimp</span></label>
+        <label class="chip"><input type="checkbox" id="set-crabs" /><span>Crabs</span></label>
+        <label class="chip"><input type="checkbox" id="set-snails" /><span>Snails</span></label>
+      </div>
+
+      <div class="set-group">The clock</div>
+      <label class="toggle"><span>Clock mode</span><input type="checkbox" id="set-clock" /><i></i></label>
+      <div class="set-hint">Off, it is just an aquarium: the fish never form the time.</div>
+
+      <div class="set-group">Drawing</div>
+      <div class="set-row">
+        <div class="seg" id="set-quality" role="group" aria-label="Quality">
+          <button type="button" data-q="auto" aria-pressed="true">Auto</button>
+          <button type="button" data-q="lite" aria-pressed="false">Lite</button>
+          <button type="button" data-q="rich" aria-pressed="false">Rich</button>
+        </div>
+        <div class="set-hint">Lite is lighter on a phone. Changing it reloads the page.</div>
+      </div>
+      <button type="button" class="set-reset" id="set-reset">Reset to the defaults</button>
+    </div>
     <div class="boot" id="boot" aria-hidden="true"></div>
 
     <div class="page">
       <nav>
         <div class="brand"><span>AquaClock</span></div>
-        <button class="pill" id="fullview" type="button">Full screen</button>
+        <div class="navright">
+          <button class="pill gearbtn" id="settings-top" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+          <button class="pill" id="fullview" type="button">Full screen</button>
+        </div>
       </nav>
 
       <main>
@@ -327,6 +411,7 @@
             <button class="primary" id="showtime" type="button">Show the time</button>
             <button class="pill" id="feed" type="button">Feed the fish</button>
           <button class="pill iconbtn" id="fullview2" type="button" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+          <button class="pill iconbtn" id="settings-cta" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
           </div>
         </div>
       </main>
@@ -334,9 +419,9 @@
       <footer>
         <div class="status">
           <span class="stat"><b id="fishcount">84</b> neons, <b>2</b> clowns</span>
-          <span class="stat">seven-segment digits</span>
+          <span class="stat clockonly">seven-segment digits</span>
           <span>render <b id="state">…</b></span>
-          <span class="stat">forms <b>on the minute</b></span>
+          <span class="stat clockonly">forms <b>on the minute</b></span>
           <span><a class="gh" href="https://github.com/digitalurban/Aqua_Clock_Web" target="_blank" rel="noopener">Source on GitHub</a></span>
         </div>
       </footer>
@@ -4061,11 +4146,12 @@ function createBubbles(scene, cfg) {
   });
 
   let accStone = 0, accPump = 0;
+  let intensity = 1;   // 1 is as it was; 0 none, and up to 3 times as many
 
   function update(dt, t) {
-    accStone += RATE_STONE * dt; while (accStone >= 1) { accStone -= 1; spawnStone(); }
-    accPump += RATE_PUMP * dt; while (accPump >= 1) { accPump -= 1; spawnPump(); }
-    for (const e of pearls) { e.timer -= dt; if (e.timer <= 0) { spawnPearl(e); e.timer = rand(1.3, 4.5); } }
+    accStone += RATE_STONE * intensity * dt; while (accStone >= 1) { accStone -= 1; spawnStone(); }
+    accPump += RATE_PUMP * intensity * dt; while (accPump >= 1) { accPump -= 1; spawnPump(); }
+    for (const e of pearls) { e.timer -= dt * intensity; if (e.timer <= 0) { spawnPearl(e); e.timer = rand(1.3, 4.5); } }
 
     for (let i = 0; i < MAX; i++) {
       const b = pool[i];
@@ -4111,6 +4197,8 @@ function createBubbles(scene, cfg) {
 
   return {
     update,
+    // how many bubbles: 1 as it was, 0 none (bubbles already rising finish their way up)
+    setIntensity(k) { intensity = Math.min(3, Math.max(0, Number.isFinite(+k) ? +k : 1)); },
     /** Pixels per world unit at distance 1, from the drawing-buffer height and the vertical fov. */
     setLight(v) { material.uniforms.uLight.value = v; },
     setSurface(y, pumpY = y) { surfaceY = y; pumpSurfaceY = pumpY; },
@@ -6670,7 +6758,7 @@ function stableRandom(seed) {
  *
  * Returns one entry per fish: { x, y, z, station, horizontal }.
  */
-function clockAssignments(date, view) {
+function clockAssignments(date, view, fish) {
   const time =
     String(date.getHours()).padStart(2, '0') + String(date.getMinutes()).padStart(2, '0');
 
@@ -6727,11 +6815,7 @@ function clockAssignments(date, view) {
       const spread = definition.horizontal ? w * 0.3 : h * 0.16;
 
       for (let k = 0; k < FISH_PER_SEGMENT; k++) {
-        const index = assignments.length;
-        if (!segments[seg]) {
-          assignments.push(dismissTarget(index));
-          continue;
-        }
+        if (!segments[seg]) continue;   // an unlit segment has no post
         const t = FISH_PER_SEGMENT <= 1 ? 0 : (k / (FISH_PER_SEGMENT - 1) - 0.5) * 2;
         assignments.push({
           x: definition.x + (definition.horizontal ? t * spread : 0),
@@ -6744,8 +6828,26 @@ function clockAssignments(date, view) {
     }
   }
 
-  while (assignments.length < FISH_COUNT) assignments.push(dismissTarget(assignments.length));
-  return assignments;
+  // Man each post with the fish nearest to it that is not already on one, and send every other fish to the
+  // edge of the tank to wait out the minute. So the digits can be formed with any number of fish from enough
+  // to man every post up (the fish chosen are the ones already close, which also makes them quicker), and
+  // there is no fixed fish for each post any more.
+  const posts = assignments;
+  const n = fish.length;
+  const out = new Array(n);
+  const taken = new Uint8Array(n);
+  for (const post of posts) {
+    let best = -1, bestDistance = Infinity;
+    for (let i = 0; i < n; i++) {
+      if (taken[i]) continue;
+      const p = fish[i].position;
+      const d = (p.x - post.x) ** 2 + (p.y - post.y) ** 2 + (p.z - post.z) ** 2;
+      if (d < bestDistance) { bestDistance = d; best = i; }
+    }
+    if (best >= 0) { taken[best] = 1; out[best] = post; }
+  }
+  for (let i = 0; i < n; i++) if (!out[i]) out[i] = dismissTarget(i);
+  return out;
 }
 
 /** An unlit segment's fish waits out the minute at the edge of the tank. */
@@ -7453,27 +7555,31 @@ async function createRiverscape(canvas, options = {}) {
     return mesh;
   }
 
-  const shoal = riggedInstances(buildFishGeometry(), FISH_COUNT, [2.4, 3.6]);
+  // The most fish there can be, in the pool; how many are showing is `fish.length` (see setFishCount).
+  const MAX_FISH = lite ? 140 : 240;
+  const shoal = riggedInstances(buildFishGeometry(), MAX_FISH, [2.4, 3.6]);
 
   const fish = [];
+  function makeFish() {
+    return {
+      position: new THREE.Vector3(rand(-5, 5), rand(2.6, 7.4), rand(-3, 1.8)),
+      velocity: new THREE.Vector3(rand(-1, 1), rand(-0.2, 0.2), rand(-0.5, 0.5)).normalize(),
+      wander: new THREE.Vector3(rand(-5, 5), rand(2.6, 7.4), rand(-3, 1.8)),
+      scale: rand(0.48, 0.62),
+      speed: rand(0.55, 1.0),
+      roll: 0,
+      orbit: rand(0, 6.28),
+      formYaw: rand(-0.22, 0.22),
+      settle: 0,
+      dismissed: false,
+      quaternion: new THREE.Quaternion(),
+    };
+  }
   {
     const colour = new THREE.Color();
-    for (let i = 0; i < FISH_COUNT; i++) {
-      fish.push({
-        position: new THREE.Vector3(rand(-5, 5), rand(2.6, 7.4), rand(-3, 1.8)),
-        velocity: new THREE.Vector3(rand(-1, 1), rand(-0.2, 0.2), rand(-0.5, 0.5)).normalize(),
-        wander: new THREE.Vector3(rand(-5, 5), rand(2.6, 7.4), rand(-3, 1.8)),
-        scale: rand(0.48, 0.62),
-        speed: rand(0.55, 1.0),
-        roll: 0,
-        orbit: rand(0, 6.28),
-        formYaw: rand(-0.22, 0.22),
-        settle: 0,
-        dismissed: false,
-        quaternion: new THREE.Quaternion(),
-      });
-      shoal.setColorAt(i, colour.setRGB(rand(0.94, 1.04), rand(0.96, 1.04), rand(0.98, 1.06)));
-    }
+    for (let i = 0; i < MAX_FISH; i++) shoal.setColorAt(i, colour.setRGB(rand(0.94, 1.04), rand(0.96, 1.04), rand(0.98, 1.06)));
+    for (let i = 0; i < FISH_COUNT; i++) fish.push(makeFish());
+    shoal.count = fish.length;
   }
 
   const CLOWN_COUNT = 2;
@@ -7651,17 +7757,46 @@ async function createRiverscape(canvas, options = {}) {
   function setClockArea(top, bottom) {
     // a band too thin to hold digits is ignored, and the default layout is used
     clockArea = top != null && bottom != null && bottom - top > 80 ? { top, bottom } : null;
-    assignments = clockAssignments(new Date(), viewFrame());
+    assignments = clockAssignments(new Date(), viewFrame(), fish);
   }
 
-  let assignments = clockAssignments(new Date(), viewFrame());
+  let assignments = clockAssignments(new Date(), viewFrame(), fish);
   let assignmentMinute = new Date().getMinutes();
   let forceShowUntil = 0;
   let formStrength = 0;
 
+  // ---- what the settings change ----
+  // With the clock on, enough fish to man every post of the busiest time of day (08:08 has 26 lit segments, 3 fish
+  // each); fewer than that and some times could not be spelled. With it off there is no least, but a few.
+  let clockEnabled = true;
+  const FISH_MIN_CLOCK = 78, FISH_MIN_FREE = 8;
+  const fishMin = () => (clockEnabled ? FISH_MIN_CLOCK : FISH_MIN_FREE);
+  function setFishCount(n) {
+    n = Math.round(clamp(Number.isFinite(+n) ? +n : FISH_COUNT, fishMin(), MAX_FISH));
+    while (fish.length < n) fish.push(makeFish());
+    fish.length = n;
+    shoal.count = n;
+    assignments = clockAssignments(new Date(), viewFrame(), fish);
+    return n;
+  }
+  function setClockMode(on) {
+    clockEnabled = !!on;
+    if (!clockEnabled) forceShowUntil = 0;
+    if (fish.length < fishMin()) setFishCount(fishMin());
+  }
+  // shrimp, crabs and snails: shown or hidden, and not run when hidden
+  const creatureOn = { shrimp: true, crabs: true, snails: true };
+  function setCreature(name, on) {
+    if (!(name in creatureOn)) return;
+    creatureOn[name] = !!on;
+    const group = { shrimp: () => shrimp.list.map((s) => s.root), crabs: () => crabs.list.map((s) => s.root), snails: () => snails.list.map((s) => s.group) }[name]();
+    for (const g of group) g.visible = !!on;
+  }
+
   function showTime() {
+    if (!clockEnabled) return;
     forceShowUntil = performance.now() + CLOCK_ACTIVE_SECONDS * 1000;
-    assignments = clockAssignments(new Date(), viewFrame());
+    assignments = clockAssignments(new Date(), viewFrame(), fish);
   }
 
   /* -- loop --------------------------------------------------------------- */
@@ -7908,16 +8043,16 @@ async function createRiverscape(canvas, options = {}) {
     const now = new Date();
     if (now.getMinutes() !== assignmentMinute) {
       assignmentMinute = now.getMinutes();
-      assignments = clockAssignments(now, viewFrame());
+      assignments = clockAssignments(now, viewFrame(), fish);
     }
     const clockMode =
-      now.getSeconds() < CLOCK_ACTIVE_SECONDS || performance.now() < forceShowUntil;
+      clockEnabled && (now.getSeconds() < CLOCK_ACTIVE_SECONDS || performance.now() < forceShowUntil);
     formStrength += ((clockMode ? 1 : 0) - formStrength) * Math.min(1, dt * 3);
 
     bubbles.update(dt, elapsed);
-    snails.update(dt, elapsed);
-    shrimp.update(dt, elapsed);
-    crabs.update(dt, elapsed);
+    if (creatureOn.snails) snails.update(dt, elapsed);
+    if (creatureOn.shrimp) shrimp.update(dt, elapsed);
+    if (creatureOn.crabs) crabs.update(dt, elapsed);
     daylight.update(dt);
     bubbles.setLight(0.35 + 0.65 * Math.min(1, daylight.state.keyI / 4.5)); // glass shows the light there is
     waterSurface.update(elapsed, daylight.state);
@@ -7935,7 +8070,7 @@ async function createRiverscape(canvas, options = {}) {
 
     steerShoal(fish, assignments, { dt, clockMode, pellets, pointer, pointerActive, obstacles });
 
-    for (let i = 0; i < FISH_COUNT; i++) {
+    for (let i = 0; i < fish.length; i++) {
       const f = fish[i];
 
       if (f.velocity.lengthSq() > 0.0004) {
@@ -8045,7 +8180,7 @@ async function createRiverscape(canvas, options = {}) {
     // depth, far back at the glass.
     bubbles.setSurface(Math.max(SURFACE_Y, topOfFrameAt(STONE.z) + 1.2), Math.max(SURFACE_Y, topOfFrameAt(PUMP.z) + 1.2));
     bubbles.setViewport(renderer.domElement.height, camera.fov);
-    assignments = clockAssignments(new Date(), viewFrame());
+    assignments = clockAssignments(new Date(), viewFrame(), fish);
   }
 
   const resizeObserver = new ResizeObserver(resize);
@@ -8082,17 +8217,29 @@ async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { shrimpApi: shrimp, crabs, pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
+  return { feed, showTime, setFishCount, setClockMode, setBubbles: (k) => bubbles.setIntensity(k), setCreature, fishRange: () => ({ min: fishMin(), max: MAX_FISH, count: fish.length, clock: clockEnabled }), advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { shrimpApi: shrimp, crabs, pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }
 
       const canvas = document.getElementById('scene');
       const boot = document.getElementById('boot');
+      // ---- settings: kept on this device, and overridable from the web address, to share a look ----
+      // (?fish=120&bubbles=2&clock=off&shrimp=off&crabs=off&snails=off&quality=lite)
+      const SETTINGS_KEY = 'aquaclock.settings';
+      const DEFAULTS = { fish: 84, bubbles: 1, clock: true, shrimp: true, crabs: true, snails: true, quality: 'auto' };
+      const settings = { ...DEFAULTS };
+      try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}); } catch (e) { /* no storage: the defaults */ }
+      {
+        const q = new URLSearchParams(location.search), on = (v) => !['off', '0', 'false', 'no'].includes(String(v).toLowerCase());
+        if (q.has('fish') && Number.isFinite(+q.get('fish'))) settings.fish = +q.get('fish');
+        if (q.has('bubbles') && Number.isFinite(+q.get('bubbles'))) settings.bubbles = +q.get('bubbles');
+        for (const k of ['clock', 'shrimp', 'crabs', 'snails']) if (q.has(k)) settings[k] = on(q.get(k));
+        if (['auto', 'lite', 'rich'].includes(q.get('quality'))) settings.quality = q.get('quality');
+      }
+      const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* not kept */ } };
       let habitat = null;
       try {
-        // ?quality=lite forces the cut-down profile, for testing on device
-        const forced = new URLSearchParams(location.search).get('quality');
         habitat = await createRiverscape(canvas, {
-          quality: forced === 'lite' || forced === 'rich' ? forced : undefined,
+          quality: settings.quality === 'lite' || settings.quality === 'rich' ? settings.quality : undefined,
           onReady: () => boot.setAttribute('data-ready', 'true'),
         });
         document.getElementById('state').textContent = habitat.quality;
@@ -8107,6 +8254,64 @@ async function createRiverscape(canvas, options = {}) {
       document.getElementById('fu-light').addEventListener('click', () => showLight(habitat.cycleLight()));
       window.addEventListener('keydown', (e) => { if ((e.key === 'l' || e.key === 'L') && !e.metaKey && !e.ctrlKey && !e.altKey) showLight(habitat.cycleLight()); });
       { const q = new URLSearchParams(location.search); const want = q.get('light') || q.get('time'); if (want) habitat.setLight(want); if (q.get('surface') === 'on') habitat.setSurfaceVisible(true); }
+      // ---- the settings panel ----
+      const $s = (id) => document.getElementById(id), panel = $s('settings');
+      const bubbleWord = (v) => (v < 0.05 ? 'Off' : v < 0.7 ? 'Gentle' : v <= 1.3 ? 'Normal' : v <= 2 ? 'Lively' : 'Fizzing');
+      function applySettings() {
+        if (!habitat) return;
+        habitat.setClockMode(settings.clock);
+        habitat.setFishCount(settings.fish);
+        habitat.setBubbles(settings.bubbles);
+        for (const k of ['shrimp', 'crabs', 'snails']) habitat.setCreature(k, settings[k]);
+        document.body.classList.toggle('noclock', !settings.clock);
+        $s('fishcount').textContent = String(habitat.fishRange().count);
+      }
+      function syncPanel() {
+        if (!habitat) return;
+        const r = habitat.fishRange();
+        const slider = $s('set-fish');
+        slider.min = r.min; slider.max = r.max; slider.value = r.count;
+        $s('set-fish-val').textContent = r.count;
+        $s('set-fish-hint').textContent = r.clock
+          ? r.min + ' is enough to spell any time of day; any more just swim. At most ' + r.max + (r.max < 200 ? ' on this screen.' : '.')
+          : 'With the clock off there is no least. At most ' + r.max + (r.max < 200 ? ' on this screen.' : '.');
+        $s('set-bubbles').value = settings.bubbles; $s('set-bubbles-val').textContent = bubbleWord(settings.bubbles);
+        for (const k of ['shrimp', 'crabs', 'snails', 'clock']) $s('set-' + k).checked = !!settings[k];
+        for (const b of document.querySelectorAll('#set-quality button')) b.setAttribute('aria-pressed', String(b.dataset.q === settings.quality));
+      }
+      const changed = () => { applySettings(); syncPanel(); saveSettings(); };
+      $s('set-fish').addEventListener('input', (e) => { settings.fish = +e.target.value; changed(); });
+      $s('set-bubbles').addEventListener('input', (e) => { settings.bubbles = +e.target.value; changed(); });
+      for (const k of ['shrimp', 'crabs', 'snails', 'clock']) $s('set-' + k).addEventListener('change', (e) => { settings[k] = e.target.checked; changed(); });
+      // a web address that names a quality would win again on reload, so it is taken out first
+      const dropQualityFromAddress = () => { try { const u = new URL(location.href); u.searchParams.delete('quality'); history.replaceState(null, '', u); } catch (e) { /* fine */ } };
+      function setQuality(q) {
+        if (q === settings.quality) return;
+        settings.quality = q; saveSettings(); dropQualityFromAddress();
+        location.reload();
+      }
+      for (const b of document.querySelectorAll('#set-quality button')) b.addEventListener('click', () => setQuality(b.dataset.q));
+      $s('set-reset').addEventListener('click', () => {
+        const before = settings.quality;
+        Object.assign(settings, DEFAULTS); saveSettings();
+        if (before !== DEFAULTS.quality) { dropQualityFromAddress(); location.reload(); }   // the drawing quality needs a reload
+        else changed();
+      });
+      const settingsOpen = () => !panel.hidden;
+      function openSettings(on) {
+        if (!habitat) return;
+        panel.hidden = !on; document.body.classList.toggle('settings-open', on);
+        if (on) { syncPanel(); $s('set-fish').focus({ preventScroll: true }); }
+      }
+      for (const id of ['settings-top', 'settings-cta', 'fu-settings']) { const b = $s(id); if (b) b.addEventListener('click', (e) => { e.stopPropagation(); openSettings(!settingsOpen()); }); }
+      $s('set-close').addEventListener('click', () => openSettings(false));
+      // a tap outside it closes it; Esc closes it before it leaves full screen; S opens and closes it
+      document.addEventListener('pointerdown', (e) => { if (settingsOpen() && !panel.contains(e.target) && !e.target.closest('#settings-top, #settings-cta, #fu-settings')) openSettings(false); });
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && settingsOpen()) { openSettings(false); e.stopImmediatePropagation(); }
+        else if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA)$/.test((e.target || {}).tagName || '')) openSettings(!settingsOpen());
+      }, true);
+      applySettings();
       // Tell the scene how much of each edge the phone's notch and corners take, so the pump (which hangs
       // near the left edge) is not hidden under them. env() can only be read through an element's style.
       const safeProbe = document.createElement('div');
@@ -8186,7 +8391,7 @@ async function createRiverscape(canvas, options = {}) {
         document.addEventListener('fullscreenchange', onFsChange);
         document.addEventListener('webkitfullscreenchange', onFsChange);
         window.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' && body.classList.contains('full')) setFull(false);
+          if (e.key === 'Escape' && body.classList.contains('full') && !body.classList.contains('settings-open')) setFull(false);
           else if ((e.key === 'f' || e.key === 'F') && !e.metaKey && !e.ctrlKey && !e.altKey) setFull(!body.classList.contains('full'), true);
           wake();
         });

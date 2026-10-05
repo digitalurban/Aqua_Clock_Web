@@ -686,7 +686,7 @@ function stableRandom(seed) {
  *
  * Returns one entry per fish: { x, y, z, station, horizontal }.
  */
-function clockAssignments(date, view) {
+function clockAssignments(date, view, fish) {
   const time =
     String(date.getHours()).padStart(2, '0') + String(date.getMinutes()).padStart(2, '0');
 
@@ -743,11 +743,7 @@ function clockAssignments(date, view) {
       const spread = definition.horizontal ? w * 0.3 : h * 0.16;
 
       for (let k = 0; k < FISH_PER_SEGMENT; k++) {
-        const index = assignments.length;
-        if (!segments[seg]) {
-          assignments.push(dismissTarget(index));
-          continue;
-        }
+        if (!segments[seg]) continue;   // an unlit segment has no post
         const t = FISH_PER_SEGMENT <= 1 ? 0 : (k / (FISH_PER_SEGMENT - 1) - 0.5) * 2;
         assignments.push({
           x: definition.x + (definition.horizontal ? t * spread : 0),
@@ -760,8 +756,26 @@ function clockAssignments(date, view) {
     }
   }
 
-  while (assignments.length < FISH_COUNT) assignments.push(dismissTarget(assignments.length));
-  return assignments;
+  // Man each post with the fish nearest to it that is not already on one, and send every other fish to the
+  // edge of the tank to wait out the minute. So the digits can be formed with any number of fish from enough
+  // to man every post up (the fish chosen are the ones already close, which also makes them quicker), and
+  // there is no fixed fish for each post any more.
+  const posts = assignments;
+  const n = fish.length;
+  const out = new Array(n);
+  const taken = new Uint8Array(n);
+  for (const post of posts) {
+    let best = -1, bestDistance = Infinity;
+    for (let i = 0; i < n; i++) {
+      if (taken[i]) continue;
+      const p = fish[i].position;
+      const d = (p.x - post.x) ** 2 + (p.y - post.y) ** 2 + (p.z - post.z) ** 2;
+      if (d < bestDistance) { bestDistance = d; best = i; }
+    }
+    if (best >= 0) { taken[best] = 1; out[best] = post; }
+  }
+  for (let i = 0; i < n; i++) if (!out[i]) out[i] = dismissTarget(i);
+  return out;
 }
 
 /** An unlit segment's fish waits out the minute at the edge of the tank. */
@@ -1469,27 +1483,31 @@ export async function createRiverscape(canvas, options = {}) {
     return mesh;
   }
 
-  const shoal = riggedInstances(buildFishGeometry(), FISH_COUNT, [2.4, 3.6]);
+  // The most fish there can be, in the pool; how many are showing is `fish.length` (see setFishCount).
+  const MAX_FISH = lite ? 140 : 240;
+  const shoal = riggedInstances(buildFishGeometry(), MAX_FISH, [2.4, 3.6]);
 
   const fish = [];
+  function makeFish() {
+    return {
+      position: new THREE.Vector3(rand(-5, 5), rand(2.6, 7.4), rand(-3, 1.8)),
+      velocity: new THREE.Vector3(rand(-1, 1), rand(-0.2, 0.2), rand(-0.5, 0.5)).normalize(),
+      wander: new THREE.Vector3(rand(-5, 5), rand(2.6, 7.4), rand(-3, 1.8)),
+      scale: rand(0.48, 0.62),
+      speed: rand(0.55, 1.0),
+      roll: 0,
+      orbit: rand(0, 6.28),
+      formYaw: rand(-0.22, 0.22),
+      settle: 0,
+      dismissed: false,
+      quaternion: new THREE.Quaternion(),
+    };
+  }
   {
     const colour = new THREE.Color();
-    for (let i = 0; i < FISH_COUNT; i++) {
-      fish.push({
-        position: new THREE.Vector3(rand(-5, 5), rand(2.6, 7.4), rand(-3, 1.8)),
-        velocity: new THREE.Vector3(rand(-1, 1), rand(-0.2, 0.2), rand(-0.5, 0.5)).normalize(),
-        wander: new THREE.Vector3(rand(-5, 5), rand(2.6, 7.4), rand(-3, 1.8)),
-        scale: rand(0.48, 0.62),
-        speed: rand(0.55, 1.0),
-        roll: 0,
-        orbit: rand(0, 6.28),
-        formYaw: rand(-0.22, 0.22),
-        settle: 0,
-        dismissed: false,
-        quaternion: new THREE.Quaternion(),
-      });
-      shoal.setColorAt(i, colour.setRGB(rand(0.94, 1.04), rand(0.96, 1.04), rand(0.98, 1.06)));
-    }
+    for (let i = 0; i < MAX_FISH; i++) shoal.setColorAt(i, colour.setRGB(rand(0.94, 1.04), rand(0.96, 1.04), rand(0.98, 1.06)));
+    for (let i = 0; i < FISH_COUNT; i++) fish.push(makeFish());
+    shoal.count = fish.length;
   }
 
   const CLOWN_COUNT = 2;
@@ -1667,17 +1685,46 @@ export async function createRiverscape(canvas, options = {}) {
   function setClockArea(top, bottom) {
     // a band too thin to hold digits is ignored, and the default layout is used
     clockArea = top != null && bottom != null && bottom - top > 80 ? { top, bottom } : null;
-    assignments = clockAssignments(new Date(), viewFrame());
+    assignments = clockAssignments(new Date(), viewFrame(), fish);
   }
 
-  let assignments = clockAssignments(new Date(), viewFrame());
+  let assignments = clockAssignments(new Date(), viewFrame(), fish);
   let assignmentMinute = new Date().getMinutes();
   let forceShowUntil = 0;
   let formStrength = 0;
 
+  // ---- what the settings change ----
+  // With the clock on, enough fish to man every post of the busiest time of day (08:08 has 26 lit segments, 3 fish
+  // each); fewer than that and some times could not be spelled. With it off there is no least, but a few.
+  let clockEnabled = true;
+  const FISH_MIN_CLOCK = 78, FISH_MIN_FREE = 8;
+  const fishMin = () => (clockEnabled ? FISH_MIN_CLOCK : FISH_MIN_FREE);
+  function setFishCount(n) {
+    n = Math.round(clamp(Number.isFinite(+n) ? +n : FISH_COUNT, fishMin(), MAX_FISH));
+    while (fish.length < n) fish.push(makeFish());
+    fish.length = n;
+    shoal.count = n;
+    assignments = clockAssignments(new Date(), viewFrame(), fish);
+    return n;
+  }
+  function setClockMode(on) {
+    clockEnabled = !!on;
+    if (!clockEnabled) forceShowUntil = 0;
+    if (fish.length < fishMin()) setFishCount(fishMin());
+  }
+  // shrimp, crabs and snails: shown or hidden, and not run when hidden
+  const creatureOn = { shrimp: true, crabs: true, snails: true };
+  function setCreature(name, on) {
+    if (!(name in creatureOn)) return;
+    creatureOn[name] = !!on;
+    const group = { shrimp: () => shrimp.list.map((s) => s.root), crabs: () => crabs.list.map((s) => s.root), snails: () => snails.list.map((s) => s.group) }[name]();
+    for (const g of group) g.visible = !!on;
+  }
+
   function showTime() {
+    if (!clockEnabled) return;
     forceShowUntil = performance.now() + CLOCK_ACTIVE_SECONDS * 1000;
-    assignments = clockAssignments(new Date(), viewFrame());
+    assignments = clockAssignments(new Date(), viewFrame(), fish);
   }
 
   /* -- loop --------------------------------------------------------------- */
@@ -1924,16 +1971,16 @@ export async function createRiverscape(canvas, options = {}) {
     const now = new Date();
     if (now.getMinutes() !== assignmentMinute) {
       assignmentMinute = now.getMinutes();
-      assignments = clockAssignments(now, viewFrame());
+      assignments = clockAssignments(now, viewFrame(), fish);
     }
     const clockMode =
-      now.getSeconds() < CLOCK_ACTIVE_SECONDS || performance.now() < forceShowUntil;
+      clockEnabled && (now.getSeconds() < CLOCK_ACTIVE_SECONDS || performance.now() < forceShowUntil);
     formStrength += ((clockMode ? 1 : 0) - formStrength) * Math.min(1, dt * 3);
 
     bubbles.update(dt, elapsed);
-    snails.update(dt, elapsed);
-    shrimp.update(dt, elapsed);
-    crabs.update(dt, elapsed);
+    if (creatureOn.snails) snails.update(dt, elapsed);
+    if (creatureOn.shrimp) shrimp.update(dt, elapsed);
+    if (creatureOn.crabs) crabs.update(dt, elapsed);
     daylight.update(dt);
     bubbles.setLight(0.35 + 0.65 * Math.min(1, daylight.state.keyI / 4.5)); // glass shows the light there is
     waterSurface.update(elapsed, daylight.state);
@@ -1951,7 +1998,7 @@ export async function createRiverscape(canvas, options = {}) {
 
     steerShoal(fish, assignments, { dt, clockMode, pellets, pointer, pointerActive, obstacles });
 
-    for (let i = 0; i < FISH_COUNT; i++) {
+    for (let i = 0; i < fish.length; i++) {
       const f = fish[i];
 
       if (f.velocity.lengthSq() > 0.0004) {
@@ -2061,7 +2108,7 @@ export async function createRiverscape(canvas, options = {}) {
     // depth, far back at the glass.
     bubbles.setSurface(Math.max(SURFACE_Y, topOfFrameAt(STONE.z) + 1.2), Math.max(SURFACE_Y, topOfFrameAt(PUMP.z) + 1.2));
     bubbles.setViewport(renderer.domElement.height, camera.fov);
-    assignments = clockAssignments(new Date(), viewFrame());
+    assignments = clockAssignments(new Date(), viewFrame(), fish);
   }
 
   const resizeObserver = new ResizeObserver(resize);
@@ -2098,5 +2145,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { shrimpApi: shrimp, crabs, pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
+  return { feed, showTime, setFishCount, setClockMode, setBubbles: (k) => bubbles.setIntensity(k), setCreature, fishRange: () => ({ min: fishMin(), max: MAX_FISH, count: fish.length, clock: clockEnabled }), advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { shrimpApi: shrimp, crabs, pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }

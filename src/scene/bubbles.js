@@ -191,11 +191,12 @@ export function createBubbles(scene, cfg) {
   });
 
   let accStone = 0, accPump = 0;
+  let intensity = 1;   // 1 is as it was; 0 none, and up to 3 times as many
 
   function update(dt, t) {
-    accStone += RATE_STONE * dt; while (accStone >= 1) { accStone -= 1; spawnStone(); }
-    accPump += RATE_PUMP * dt; while (accPump >= 1) { accPump -= 1; spawnPump(); }
-    for (const e of pearls) { e.timer -= dt; if (e.timer <= 0) { spawnPearl(e); e.timer = rand(1.3, 4.5); } }
+    accStone += RATE_STONE * intensity * dt; while (accStone >= 1) { accStone -= 1; spawnStone(); }
+    accPump += RATE_PUMP * intensity * dt; while (accPump >= 1) { accPump -= 1; spawnPump(); }
+    for (const e of pearls) { e.timer -= dt * intensity; if (e.timer <= 0) { spawnPearl(e); e.timer = rand(1.3, 4.5); } }
 
     for (let i = 0; i < MAX; i++) {
       const b = pool[i];
@@ -241,6 +242,8 @@ export function createBubbles(scene, cfg) {
 
   return {
     update,
+    // how many bubbles: 1 as it was, 0 none (bubbles already rising finish their way up)
+    setIntensity(k) { intensity = Math.min(3, Math.max(0, Number.isFinite(+k) ? +k : 1)); },
     /** Pixels per world unit at distance 1, from the drawing-buffer height and the vertical fov. */
     setLight(v) { material.uniforms.uLight.value = v; },
     setSurface(y, pumpY = y) { surfaceY = y; pumpSurfaceY = pumpY; },
