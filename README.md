@@ -58,7 +58,7 @@ build anything on top of it.
 >   behaviour, the bubbles, the fog, the air stone, the pump, the snails, the shrimp, the light
 >   through the day and the page.
 >
-> What this repo adds is our previous concept of fish telling the time, a pair of clownfish, glassy bubbles, and a hosted web page tuned for phones and tablets. Not affiliated with, or endorsed by, Habitats or Chase Lean.
+> What this repo adds is our previous concept of fish telling the time, a pair of clownfish, glassy bubbles, and a hosted web page tuned for phones and tablets. 
 
 ## The app
 
