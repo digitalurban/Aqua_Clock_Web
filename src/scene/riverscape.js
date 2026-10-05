@@ -1273,21 +1273,23 @@ export async function createRiverscape(canvas, options = {}) {
     const nearZ = camera.position.z + t * glassRay.z;
     return { minX: -2.5, maxX: 6.2, minZ: 0.7, maxZ: clamp(nearZ, 1.2, 3.2) };
   }
-  shrimp.setArea(shrimpArea());
-  // The sand the crabs may use: the same depth as the shrimp's, but as wide as the screen shows it, less
-  // a margin, and not the fixed strip the shrimp use, so they are found across the whole picture and not
-  // only in the middle. Once the scene knows what the screen shows, they are scattered across it.
-  function crabArea() {
+  // The sand the shrimp and the crabs may use: the depth of the strip the screen shows, and as wide as
+  // the screen shows it, less a margin, so that they are found across the whole picture and not only in
+  // the middle. (It was a fixed strip, about the middle of the sand.) Once the scene knows what the
+  // screen shows, they are scattered across it, once.
+  function walkerArea() {
     const a = shrimpArea();
     const half = Math.max(2.2, SHOAL.kx * (SHOAL.camZ - a.maxZ) - 0.9);
     return { minX: -half, maxX: half, minZ: a.minZ, maxZ: a.maxZ };
   }
-  let crabsScattered = false;
-  function updateCrabArea() {
-    crabs.setArea(crabArea());
-    if (!crabsScattered && SHOAL.ready) { crabsScattered = true; crabs.scatter(); }
+  let walkersScattered = false;
+  function updateWalkerAreas() {
+    const a = walkerArea();
+    shrimp.setArea(a);
+    crabs.setArea(a);
+    if (!walkersScattered && SHOAL.ready) { walkersScattered = true; shrimp.scatter(); crabs.scatter(); }
   }
-  updateCrabArea();
+  updateWalkerAreas();
 
   // The world height of the top edge of the screen, on the plane at depth z. Bubbles use it: the
   // water's surface (y = 10) is never drawn, and on a wide lens the top of the screen is above it.
@@ -2053,8 +2055,7 @@ export async function createRiverscape(canvas, options = {}) {
     placeStone();
     snails.setArea(snailArea());
     placePump();
-    shrimp.setArea(shrimpArea());
-  updateCrabArea();
+    updateWalkerAreas();
     // The surface is not drawn (unless ?surface=on), so the bubbles pop just past the top edge of the
     // picture, not at the waterline: never below the real surface; the pump's own is worked out at its
     // depth, far back at the glass.
@@ -2097,5 +2098,5 @@ export async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { crabs, pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
+  return { feed, showTime, advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { shrimpApi: shrimp, crabs, pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }

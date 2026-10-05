@@ -4397,8 +4397,10 @@ const createShrimp = (function () {
  * small paddle-like swimmerets under the abdomen; a body that curves down to a fan-shaped tail.
  *
  * They are mostly bottom-dwellers, so they scuttle over the sand, stopping to pick at it with
- * the front claws and to groom their antennae. They also climb the low stones and sit on them,
- * picking at the surface; now and then they swim up into the water, legs folded back and
+ * the front claws and to groom their antennae. They walk over the low stones and also climb them to sit
+ * on top, and they swim to the tops of the tall rocks, rising above the rock, coming down on the flat of
+ * its top, and sitting there before swimming off. They have the whole width of the sand. On a stone
+ * they sit picking at the surface; now and then they swim up into the water, legs folded back and
  * swimmerets beating, to a new spot on the sand; and rarely they flick the tail under the body
  * to shoot backward.
  *
@@ -4479,7 +4481,62 @@ function buildGrid(mesh) {
       if (c >= 3) f[k] = sum / c;
     }
   }
+  // the top of the stone: the highest cell, and the middle of the cells within a tenth of that height of it,
+  // so that there is a place to land and not a spike
+  let max = -1e9, maxK = 0;
+  for (let k = 0; k < f.length; k++) if (f[k] > max) { max = f[k]; maxK = k; }
+  let sx = 0, sz = 0, cnt = 0;
+  for (let iz = 0; iz < nz; iz++) {
+    for (let ix = 0; ix < nx; ix++) {
+      if (f[iz * nx + ix] > max - 0.1 * Math.max(0.5, max)) { sx += x0 + (ix + 0.5) * CELL; sz += z0 + (iz + 0.5) * CELL; cnt++; }
+    }
+  }
+  // and the front of the top: of the cells near the highest that are an exposed crest (no higher than anything
+  // within about 0.3 around them: not down in a groove between two ridges, where a shrimp would be buried),
+  // the one nearest the camera (the largest z), so that a shrimp landing there is on the side of the rock
+  // that can be seen and not hidden behind its bulk
+  let fx = 0, fz = -1e9, sfx = 0, sfz = -1e9;     // (sf: the same, but with the rock under a whole body's width of it)
+  const R = Math.round(0.3 / CELL), R2 = Math.round(0.25 / CELL);
+  for (let iz = 0; iz < nz; iz++) {
+    for (let ix = 0; ix < nx; ix++) {
+      const v = f[iz * nx + ix];
+      if (v <= max - 0.12 * Math.max(0.5, max)) continue;
+      const z = z0 + (iz + 0.5) * CELL;
+      if (z <= fz) continue;
+      let crest = true;
+      for (let dz = -R; dz <= R && crest; dz++) {
+        for (let dx = -R; dx <= R; dx++) {
+          const jz = iz + dz, jx = ix + dx;
+          if (jz < 0 || jx < 0 || jz >= nz || jx >= nx) continue;
+          if (f[jz * nx + jx] > v + 0.03) { crest = false; break; }
+        }
+      }
+      if (crest) { fz = z; fx = x0 + (ix + 0.5) * CELL; }
+    }
+  }
+  // the same again, but only where there is rock under a whole body's width of it (nothing hangs over an
+  // edge, and it is not on a spire), if there is anywhere like that
+  for (let iz = R2; iz < nz - R2; iz++) {
+    for (let ix = R2; ix < nx - R2; ix++) {
+      const v = f[iz * nx + ix];
+      if (v <= max - 0.2 * Math.max(0.5, max)) continue;
+      const z = z0 + (iz + 0.5) * CELL;
+      if (z <= sfz) continue;
+      let ok = true;
+      for (let dz = -R2; dz <= R2 && ok; dz++) {
+        for (let dx = -R2; dx <= R2; dx++) {
+          const q = f[(iz + dz) * nx + ix + dx];
+          if (q < -1e8 || q < v - 0.3 || q > v + 0.12) { ok = false; break; }
+        }
+      }
+      if (ok) { sfz = z; sfx = x0 + (ix + 0.5) * CELL; }
+    }
+  }
+  if (sfz > -1e8) { fx = sfx; fz = sfz; }
+  if (fz < -1e8) { fx = x0 + ((maxK % nx) + 0.5) * CELL; fz = z0 + (Math.floor(maxK / nx) + 0.5) * CELL; }   // no crest found: the highest point
+  const peak = { max, fx, fz, x: sx / Math.max(1, cnt), z: sz / Math.max(1, cnt), mx: x0 + ((maxK % nx) + 0.5) * CELL, mz: z0 + (Math.floor(maxK / nx) + 0.5) * CELL };
   return {
+    peak,
     at(x, z) {
       const fx = (x - x0) / CELL, fz = (z - z0) / CELL, ix = Math.floor(fx), iz = Math.floor(fz);
       if (ix < 0 || iz < 0 || ix >= nx - 1 || iz >= nz - 1) return null;
@@ -4615,16 +4672,43 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
     speck: material({ color: '#d98a4a', roughness: 0.6, metalness: 0 }, 'speck'),
   };
 
-  const clearOfRock = (x, z, margin) => obstacles.every((o) => Math.hypot(x - o.center.x, z - o.center.z) > o.radius + margin);
-  // the low stones, which they can climb; each one's surface grid is built the first time it is needed
+  // The low stones are not walls to a shrimp: it walks over them, as well as climbing them on purpose to
+  // sit on top, and that is what lets it get from one end of the sand to the other. The tall rocks and
+  // the air stone block it on foot; but it can swim, and it swims up to the tops of the tall rocks.
+  // Each stone's surface grid is built the first time a shrimp is near it.
   const stones = obstacles.filter((o) => o.mesh && o.mesh.scale.y <= 0.6);
+  const solid = obstacles.filter((o) => !stones.includes(o));
+  const tall = solid.filter((o) => o.mesh);
+  const clearOfRock = (x, z, margin) => solid.every((o) => Math.hypot(x - o.center.x, z - o.center.z) > o.radius + margin);
   const gridOf = (o) => (o.grid ??= buildGrid(o.mesh));
-  // the height they stand at: the sand, or the stone they are on, if it is higher there
+  // the tall rocks with a top well above the sand (some of the larger objects are barely above it): worth a swim
+  let perchableList = null;
+  const perchable = () => (perchableList ??= tall.filter((o) => gridOf(o).peak.max > 0.7));
+  // a stone whose top is inside a tall rock's keep-clear circle is not a place to go or to start
+  const reachable = (o) => clearOfRock(o.center.x, o.center.z, 0);
+  // the height they stand at: the sand, or the top of a stone, if it is higher there; or the tall rock they are on
   function heightAt(s, x, z) {
-    const sand = ground(x, z);
-    if (!s.rock) return sand;
-    const y = gridOf(s.rock).at(x, z);
-    return y !== null && y > sand ? y : sand;
+    let y = ground(x, z);
+    for (const o of stones) {
+      if (Math.hypot(x - o.center.x, z - o.center.z) > o.radius + 0.4) continue;
+      const t = gridOf(o).at(x, z);
+      if (t !== null && t > y) y = t;
+    }
+    if (s.rock && !stones.includes(s.rock)) {
+      const t = gridOf(s.rock).at(x, z);
+      if (t !== null && t > y) y = t;
+    }
+    return y;
+  }
+  // the highest surface at a place, of the sand and of every stone and rock (for checking a flight clears them)
+  function surfaceAt(x, z, except) {
+    let y = ground(x, z);
+    for (const o of obstacles) {
+      if (o === except || !o.mesh || Math.hypot(x - o.center.x, z - o.center.z) > o.radius + 0.4) continue;
+      const t = gridOf(o).at(x, z);
+      if (t !== null && t > y) y = t;
+    }
+    return y;
   }
 
   const list = [];
@@ -4658,7 +4742,8 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
       tx: 0, tz: 0, swimAlt: 0, swimSpeed: 0.5,
       slow: 1,
       swimming: 0,     // 0 = on the surface, 1 = swimming: eases, so the legs fold and unfold smoothly
-      flicks: 0, swims: 0, climbs: 0,
+      flicks: 0, swims: 0, climbs: 0, rockTrips: 0,
+      land: null,      // set when it is swimming to the top of a tall rock: { rock, y (where it lands), max (the highest point) }
     });
     list.push(model);
   }
@@ -4667,26 +4752,42 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
   function startSwim(s) {
     let tx, tz, tries = 0;
     do {
-      const a = rand(0, Math.PI * 2), d = rand(1.5, 3.5);
+      const a = rand(0, Math.PI * 2), d = rand(1.5, 5);
       tx = clamp(s.x + Math.cos(a) * d, area.minX + 0.3, area.maxX - 0.3);
       tz = clamp(s.z + Math.sin(a) * d * 0.6, area.minZ + 0.2, area.maxZ - 0.2);
       tries++;
-    } while (tries < 20 && !clearOfRock(tx, tz, 0.6));
-    Object.assign(s, { state: 'swim', tx, tz, swimAlt: rand(0.45, 1.5), swimSpeed: rand(0.45, 0.7), timer: 16, rock: null });
+    } while (tries < 30 && !clearOfRock(tx, tz, 1.0));
+    Object.assign(s, { state: 'swim', tx, tz, swimAlt: rand(0.45, 1.8), swimSpeed: rand(0.7, 1.0), timer: 16 + Math.hypot(tx - s.x, tz - s.z) / 0.4, rock: null, land: null });
     s.swims++;
+  }
+  // Swim to the top of a tall rock: up to above its top, over to the middle of the flat of it, and down
+  // onto it. (`only` names the rock; otherwise it is one of the three nearest.)
+  function startRockTrip(s, only) {
+    const near = perchable().filter((o) => o.center.x > area.minX - 2 && o.center.x < area.maxX + 2);
+    if (!near.length) return false;
+    near.sort((a, b) => Math.hypot(a.center.x - s.x, a.center.z - s.z) - Math.hypot(b.center.x - s.x, b.center.z - s.z));
+    const o = only || near[Math.min(near.length - 1, Math.floor(Math.random() * Math.min(3, near.length)))];
+    const g = gridOf(o), top = g.peak;
+    let lx = top.fx, lz = top.fz, y = g.at(lx, lz);                  // the front of the top, where it can be seen
+    if (y === null) { lx = top.x; lz = top.z; y = g.at(lx, lz); }   // or the middle of it
+    if (y === null) { lx = top.mx; lz = top.mz; y = top.max; }       // or its highest point
+    const dist = Math.hypot(lx - s.x, lz - s.z);
+    Object.assign(s, { state: 'swim', tx: lx, tz: lz, swimAlt: 0, swimSpeed: rand(0.7, 0.95), timer: 25 + dist / 0.2, rock: null, land: { rock: o, y, max: top.max } });
+    s.swims++; s.rockTrips++;
+    return true;
   }
   // no other stone lies across the straight line from the shrimp to this one: with one in the way,
   // the pull toward the target and the push away from the obstacle cancel, and it gets stuck
   function pathClear(s, o) {
     const dx = o.center.x - s.x, dz = o.center.z - s.z, len2 = dx * dx + dz * dz || 1;
-    return obstacles.every((q) => {
+    return solid.every((q) => {
       if (q === o) return true;
       const t = clamp(((q.center.x - s.x) * dx + (q.center.z - s.z) * dz) / len2, 0, 1);
       return Math.hypot(q.center.x - (s.x + t * dx), q.center.z - (s.z + t * dz)) > q.radius * 0.85 + 0.1;
     });
   }
   function startClimb(s) {
-    const near = stones.filter((o) => o.center.x > area.minX - 0.2 && o.center.x < area.maxX + 0.2 && o.center.z > area.minZ - 0.2 && o.center.z < area.maxZ + 0.6 && pathClear(s, o));
+    const near = stones.filter((o) => reachable(o) && o.center.x > area.minX - 0.2 && o.center.x < area.maxX + 0.2 && o.center.z > area.minZ - 0.2 && o.center.z < area.maxZ + 0.6 && pathClear(s, o));
     if (!near.length) return false;
     near.sort((a, b) => Math.hypot(a.center.x - s.x, a.center.z - s.z) - Math.hypot(b.center.x - s.x, b.center.z - s.z));
     s.rock = near[Math.min(near.length - 1, Math.floor(Math.random() * Math.min(3, near.length)))];
@@ -4699,7 +4800,7 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
   function nextAfterWalk(s) {
     const r = Math.random();
     if (r < 0.05) { s.state = 'flick'; s.flickT = 0; s.flicks++; }
-    else if (r < 0.17) startSwim(s);
+    else if (r < 0.17) { if (!(Math.random() < 0.7 && startRockTrip(s))) startSwim(s); }   // mostly to a tall rock
     else if (r < 0.30 && startClimb(s)) { /* on its way up */ }
     else if (r < 0.62) { s.state = 'forage'; s.timer = rand(3, 7); }
     else if (r < 0.76) { s.state = 'groom'; s.timer = rand(2, 4); }
@@ -4707,19 +4808,21 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
   }
   function nextAfterForage(s) {
     const r = Math.random();
-    if (r < 0.55) { s.state = 'walk'; s.timer = rand(4, 11); s.turn = rand(-0.3, 0.3); }
-    else if (r < 0.65) startSwim(s);
-    else if (r < 0.75 && startClimb(s)) { /* on its way up */ }
+    if (r < 0.52) { s.state = 'walk'; s.timer = rand(4, 11); s.turn = rand(-0.3, 0.3); }
+    else if (r < 0.60) { if (!(Math.random() < 0.7 && startRockTrip(s))) startSwim(s); }
+    else if (r < 0.70 && startClimb(s)) { /* on its way up */ }
     else if (r < 0.9) { s.state = 'groom'; s.timer = rand(2, 4); }
     else s.timer = rand(2, 5);
   }
 
   // steer away from the stones (all but the one it means to be on), slowing as it gets close
-  function steerAway(s, except) {
+  function steerAway(s, except, height = 0) {
     let steer = 0;
     s.nearest = 9;
-    for (const o of obstacles) {
+    for (const o of solid) {
       if (o === except) continue;
+      // flying well above a rock's top, it does not need to go round it
+      if (height > 0 && height > (o.mesh ? gridOf(o).peak.max : 1e9) + 0.3) continue;
       const dx = s.x - o.center.x, dz = s.z - o.center.z;
       const surface = Math.hypot(dx, dz) - o.radius - 0.3 * s.size;
       if (surface < s.nearest) s.nearest = surface;
@@ -4766,18 +4869,75 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
         s.lift = 0.22 * Math.sin(Math.PI * clamp(s.flickT / 0.5, 0, 1));
         if (s.flickT > 0.6) { s.state = 'forage'; s.timer = rand(1.5, 3); s.lift = 0; }
       } else if (s.state === 'swim') {
-        // lift off, glide toward the target steering round the stones, and come down on it
+        // lift off, glide toward the target steering round the stones, and come down on it. A trip to a tall
+        // rock rises to above its top, comes down over the landing place, and lands on the rock.
         const dx = s.tx - s.x, dz = s.tz - s.z, dist = Math.hypot(dx, dz);
         const want = Math.atan2(-dz, dx);
-        s.heading += clamp(clamp(wrapPI(want - s.heading), -1, 1) * 2 + steerAway(s, null), -1.8, 1.8) * dt;
+        s.heading += clamp(clamp(wrapPI(want - s.heading), -1, 1) * 2 + steerAway(s, s.land ? s.land.rock : null, s.gy + s.alt), -1.8, 1.8) * dt;
         speed = s.swimSpeed * (dist > 0.4 ? 1 : 0.2 + dist / 0.5);
-        if (s.timer <= 0) { s.tx = s.x; s.tz = s.z; }          // out of time: come down where it is
-        const altTarget = dist > 1.1 ? s.swimAlt : 0;
-        const rate = altTarget > s.alt ? 1.1 : 0.9;
+        if (s.timer <= 0) {
+          // out of time: come down where it is, unless that is over a rock, and then on to a clear place on the sand
+          if (surfaceAt(s.x, s.z) > ground(s.x, s.z) + 0.25) startSwim(s);
+          else { s.tx = s.x; s.tz = s.z; s.land = null; }
+        }
+        // The highest surface here and a body's length ahead (leaving out the rock it is landing on): it
+        // flies above that, so it never flies into a rock that is in the way.
+        const ahead = Math.cos(s.heading), aheadZ = -Math.sin(s.heading), except = s.land ? s.land.rock : null;
+        let floor = 0;
+        if (dist > 0.5) for (let k = 0; k <= 4; k++) floor = Math.max(floor, surfaceAt(s.x + ahead * 0.3 * k, s.z + aheadZ * 0.3 * k, except));
+        // Near any rock it flies above the whole of it (its highest point and a margin), and not only above the
+        // surface it is over: the look-ahead sees what is along the way, and this covers the shape it cannot see,
+        // like the far side of a rock and the edges of cliffs. The rock it is landing on counts only until it is
+        // close to the landing place.
+        let peakFloor = 0;
+        for (const o of tall) {
+          if (o === except && dist < 1.0) continue;
+          if (Math.hypot(s.x - o.center.x, s.z - o.center.z) < o.radius + 0.8) peakFloor = Math.max(peakFloor, gridOf(o).peak.max + 0.3);
+        }
+        let absTarget;
+        if (s.land) {
+          // far off: above the top of the rock. Within a unit of the landing place: down over the flat of the top.
+          const near = clamp((dist - 0.3) / 0.7, 0, 1);                       // 1 far away, 0 over the landing place
+          const rockHere = gridOf(s.land.rock).at(s.x, s.z);
+          const here = rockHere !== null ? rockHere : s.land.y;
+          absTarget = here + near * Math.max(0, s.land.max + 0.3 - here);
+          if (floor > 0) absTarget = Math.max(absTarget, floor + 0.28);
+          absTarget = Math.max(absTarget, peakFloor);
+          // above the surface of its own rock between here and the landing place too (not beyond it): the side of
+          // a rock can rise faster than it can, and it would dip into it
+          {
+            const grid = gridOf(s.land.rock);
+            let own = 0;
+            for (let k = 0; k <= 4; k++) { const d = Math.min(0.3 * k, dist); own = Math.max(own, grid.at(s.x + ahead * d, s.z + aheadZ * d) ?? 0); }
+            absTarget = Math.max(absTarget, own + 0.05);
+          }
+        } else {
+          absTarget = s.gy + (dist > 1.1 ? s.swimAlt : 0);
+          if (dist > 0.5) absTarget = Math.max(absTarget, floor + 0.28);
+          absTarget = Math.max(absTarget, peakFloor);
+        }
+        const altTarget = Math.max(0, absTarget - s.gy);
+        // up at a steady rate, or quicker when it has a long way to go (a rock rising ahead); down more slowly
+        const rate = altTarget > s.alt ? (altTarget - s.alt > 0.25 ? 1.8 : 1.1) : 0.9;
         const before = s.alt;
         s.alt += clamp(altTarget - s.alt, -rate * dt, rate * dt);
+        // and a hard floor under all of that: never below the surface it is over (the look-ahead should have
+        // lifted it already; this is for whatever it missed)
+        const hard = Math.max(surfaceAt(s.x, s.z, except), s.land ? (gridOf(s.land.rock).at(s.x, s.z) ?? 0) : 0);
+        if (s.gy + s.alt < hard + 0.02) s.alt += Math.min(hard + 0.02 - (s.gy + s.alt), 3 * dt);
         s.altVel = (s.alt - before) / Math.max(dt, 1e-4);
-        if (dist < 0.35 && s.alt < 0.03) { s.alt = 0; s.altVel = 0; s.state = 'forage'; s.timer = rand(2, 5); }
+        if (s.land) {
+          // it touches down on the rock where it is, at the height of the rock under it, so nothing jumps
+          const rockHere = gridOf(s.land.rock).at(s.x, s.z);
+          if (dist < 0.3 && rockHere !== null && s.gy + s.alt - rockHere < 0.06) {
+            const height = s.gy + s.alt;
+            s.rock = s.land.rock; s.land = null;
+            s.gy = heightAt(s, s.x, s.z);
+            s.alt = Math.max(0, height - s.gy);          // a few hundredths at most; it settles in the perch
+            s.altVel = 0;
+            s.state = 'perch'; s.timer = rand(8, 16);
+          }
+        } else if (dist < 0.35 && s.alt < 0.03) { s.alt = 0; s.altVel = 0; s.state = 'forage'; s.timer = rand(2, 5); }
       } else if (s.state === 'climb') {
         // walk up to the top of the stone
         const o = s.rock;
@@ -4792,11 +4952,21 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
         else if (s.timer <= 0) { s.rock = null; s.state = 'walk'; s.timer = rand(4, 8); }
       } else if (s.state === 'perch') {
         // sit on the stone and pick at it, then turn and walk off
+        s.alt = Math.max(0, s.alt - 0.3 * dt);
         if (s.timer <= 0) {
           const o = s.rock;
-          s.heading = Math.atan2(-(s.z - o.center.z), s.x - o.center.x) + rand(-0.6, 0.6);
-          s.state = 'descend';
-          s.timer = 14;
+          if (!stones.includes(o)) {
+            // on a tall rock: it swims off, from where it sits, so the height carries on smoothly
+            const height = s.gy + s.alt;
+            s.rock = null;
+            s.gy = heightAt(s, s.x, s.z);
+            s.alt = Math.max(0, height - s.gy);
+            startSwim(s);
+          } else {
+            s.heading = Math.atan2(-(s.z - o.center.z), s.x - o.center.x) + rand(-0.6, 0.6);
+            s.state = 'descend';
+            s.timer = 14;
+          }
         }
       } else if (s.state === 'descend') {
         const o = s.rock;
@@ -4815,9 +4985,11 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
         const gait = swimmingNow ? 1 : 0.88 + 0.12 * Math.sin(time * 2 + s.phase);   // a gentle surge, not a stutter
         s.x += Math.cos(s.heading) * speed * gait * dt;
         s.z -= Math.sin(s.heading) * speed * gait * dt;
-        const pad = s.rock ? 0.8 : 0;   // a stone at the edge of the sand may be climbed
-        s.x = clamp(s.x, area.minX - pad, area.maxX + pad);
-        s.z = clamp(s.z, area.minZ - pad, area.maxZ + pad);
+        // The strip of sand is where it prefers to be, and steering brings it back; only the tank itself is a
+        // hard limit. (A hard clamp to the strip would throw a shrimp that had come down just behind it, or
+        // swum off a rock, back into it in one step.)
+        s.x = clamp(s.x, area.minX - 2, area.maxX + 2);
+        s.z = clamp(s.z, -4, area.maxZ + 1);
         if (!swimmingNow) s.stride += dt * (9 + speed * 30);   // unhurried steps
       }
 
@@ -4827,7 +4999,7 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
       const hA = heightAt(s, s.x + Math.cos(s.heading) * ahead, s.z - Math.sin(s.heading) * ahead);
       const hB = heightAt(s, s.x - Math.cos(s.heading) * ahead, s.z + Math.sin(s.heading) * ahead);
       const gy = heightAt(s, s.x, s.z);
-      const slopeTilt = clamp((s.rock ? 0.9 : 0.5) * Math.atan2(hA - hB, 2 * ahead), -0.7, 0.7);
+      const slopeTilt = clamp((gy > ground(s.x, s.z) + 0.03 ? 0.9 : 0.5) * Math.atan2(hA - hB, 2 * ahead), -0.7, 0.7);
       // swimming, it pitches up as it climbs and down as it descends
       const pitchTarget = swimmingNow ? clamp(s.altVel * 0.4, -0.4, 0.4) + 0.04 : slopeTilt;
       if (s.gy === undefined) { s.gy = gy; s.pitch = pitchTarget; }
@@ -4895,6 +5067,44 @@ function createShrimp(scene, { count = 2, ground, obstacles = [] } = {}) {
   return {
     update,
     list,
+    area: () => area,
+    surfaceAt,
+    tallRocks: () => perchable(),
+    // send shrimp i swimming to the top of a tall rock (`only` names the rock), or on a climb (for testing)
+    swimToRock(i, only) { const s = list[i]; if (!s || s.rock) return false; return startRockTrip(s, only); },
+    climb(i) { const s = list[i]; if (!s || s.rock) return false; return startClimb(s); },
+    // Put them down across the whole strip of sand, not bunched in the middle: each in its own part of the
+    // strip (divided between them, in a random order, with the middle left out), clear of the tall rocks,
+    // and now and then one starts perched on a low stone. The scene does this once, when it first knows
+    // what the screen shows.
+    scatter() {
+      const n = list.length, width = area.maxX - area.minX;
+      const order = list.map((_, i) => i).sort(() => Math.random() - 0.5);
+      const inStrip = stones.filter((o) => reachable(o) && o.center.x > area.minX && o.center.x < area.maxX && o.center.z > area.minZ - 0.2 && o.center.z < area.maxZ + 0.2);
+      order.forEach((k, slot) => {
+        let lo = area.minX + (width * slot) / n, hi = area.minX + (width * (slot + 1)) / n;
+        if (hi <= 0) hi = Math.min(hi, -0.1 * width); else if (lo >= 0) lo = Math.max(lo, 0.1 * width);
+        const s = list[k];
+        s.rock = null; s.land = null; s.alt = 0; s.altVel = 0; s.gy = undefined;
+        s.heading = rand(-Math.PI, Math.PI);
+        const here = inStrip.filter((o) => o.center.x > lo && o.center.x < hi);
+        if (here.length && Math.random() < 0.25) {
+          const o = here[Math.floor(Math.random() * here.length)];
+          s.rock = o; s.x = o.center.x; s.z = o.center.z; s.state = 'perch'; s.timer = rand(6, 14);
+          return;
+        }
+        let x, z, tries = 0, ok = false;
+        while (!ok && tries < 300) {
+          x = tries < 200 ? rand(lo + 0.2, hi - 0.2) : rand(area.minX + 0.4, area.maxX - 0.4);
+          z = rand(area.minZ + 0.1, area.maxZ - 0.1);
+          ok = clearOfRock(x, z, 0.4);
+          tries++;
+        }
+        s.x = x; s.z = z;
+        s.state = Math.random() < 0.5 ? 'walk' : 'forage';
+        s.timer = rand(2, 8);
+      });
+    },
     // the scene sets where on the sand they may go, from what the screen can see of it
     setArea(a) { area = a; for (const s of list) { if (s.state === 'swim' || s.rock) continue; s.x = clamp(s.x, a.minX, a.maxX); s.z = clamp(s.z, a.minZ, a.maxZ); } },
     dispose() { for (const s of list) scene.remove(s.root); },
@@ -7047,21 +7257,23 @@ async function createRiverscape(canvas, options = {}) {
     const nearZ = camera.position.z + t * glassRay.z;
     return { minX: -2.5, maxX: 6.2, minZ: 0.7, maxZ: clamp(nearZ, 1.2, 3.2) };
   }
-  shrimp.setArea(shrimpArea());
-  // The sand the crabs may use: the same depth as the shrimp's, but as wide as the screen shows it, less
-  // a margin, and not the fixed strip the shrimp use, so they are found across the whole picture and not
-  // only in the middle. Once the scene knows what the screen shows, they are scattered across it.
-  function crabArea() {
+  // The sand the shrimp and the crabs may use: the depth of the strip the screen shows, and as wide as
+  // the screen shows it, less a margin, so that they are found across the whole picture and not only in
+  // the middle. (It was a fixed strip, about the middle of the sand.) Once the scene knows what the
+  // screen shows, they are scattered across it, once.
+  function walkerArea() {
     const a = shrimpArea();
     const half = Math.max(2.2, SHOAL.kx * (SHOAL.camZ - a.maxZ) - 0.9);
     return { minX: -half, maxX: half, minZ: a.minZ, maxZ: a.maxZ };
   }
-  let crabsScattered = false;
-  function updateCrabArea() {
-    crabs.setArea(crabArea());
-    if (!crabsScattered && SHOAL.ready) { crabsScattered = true; crabs.scatter(); }
+  let walkersScattered = false;
+  function updateWalkerAreas() {
+    const a = walkerArea();
+    shrimp.setArea(a);
+    crabs.setArea(a);
+    if (!walkersScattered && SHOAL.ready) { walkersScattered = true; shrimp.scatter(); crabs.scatter(); }
   }
-  updateCrabArea();
+  updateWalkerAreas();
 
   // The world height of the top edge of the screen, on the plane at depth z. Bubbles use it: the
   // water's surface (y = 10) is never drawn, and on a wide lens the top of the screen is above it.
@@ -7827,8 +8039,7 @@ async function createRiverscape(canvas, options = {}) {
     placeStone();
     snails.setArea(snailArea());
     placePump();
-    shrimp.setArea(shrimpArea());
-  updateCrabArea();
+    updateWalkerAreas();
     // The surface is not drawn (unless ?surface=on), so the bubbles pop just past the top edge of the
     // picture, not at the waterline: never below the real surface; the pump's own is worked out at its
     // depth, far back at the glass.
@@ -7871,7 +8082,7 @@ async function createRiverscape(canvas, options = {}) {
     renderer.dispose();
   }
 
-  return { feed, showTime, advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { crabs, pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
+  return { feed, showTime, advance, setClockArea, setFullView, setSafeArea, setLight: (m) => daylight.setMode(m), cycleLight: () => daylight.cycle(), lightLabel: () => daylight.label, setSurfaceVisible: (v) => { waterSurface.mesh.visible = !!v; }, dispose, quality, scene, camera, debug: { shrimpApi: shrimp, crabs, pumpGroup, fish, shoalLimits: (z) => ({ ...shoalLimits(z) }), clowns, obstacles, HOST, snails: snails.list, snailArea, bubbles, topOfFrameAt, shrimp: shrimp.list, shrimpArea, daylight, waterSurface, shafts } };
 }
 
       const canvas = document.getElementById('scene');
